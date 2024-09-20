@@ -156,7 +156,9 @@ export const createRestaurant = asyncHandler(async (req, res) => {
 
   let restaurantImgUrl;
   try {
-    const imgUrl = await uploadImg(restaurantImg);
+    const imgUrl = await uploadImg(restaurantImg, {
+      transformation: [{ width: 260, height: 140, crop: "fill" }],
+    });
 
     restaurantImgUrl = imgUrl;
   } catch (err) {

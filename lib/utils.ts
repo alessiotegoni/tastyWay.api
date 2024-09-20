@@ -8,7 +8,7 @@ import {
 } from "../types";
 import { Response } from "express";
 import multer from "multer";
-import { v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary, UploadApiOptions } from "cloudinary";
 
 type UserJwtType = UserAccessToken | UserRefreshToken;
 
@@ -109,10 +109,10 @@ export const getItems = (
   return items;
 };
 
-export const uploadImg = async (img: Express.Multer.File) => {
+export const uploadImg = async (img: Express.Multer.File, uploadOptions?: UploadApiOptions) => {
   const base64Image = Buffer.from(img.buffer).toString("base64");
   const dataURI = `data:${img.mimetype};base64,${base64Image}`;
-  const uploadResponse = await cloudinary.uploader.upload(dataURI);
+  const uploadResponse = await cloudinary.uploader.upload(dataURI, uploadOptions);
 
   return uploadResponse.secure_url;
 };
