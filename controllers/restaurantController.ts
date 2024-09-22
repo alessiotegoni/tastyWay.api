@@ -64,8 +64,6 @@ export const getRestaurants = asyncHandler(async (req, res) => {
 
   const restaurantFilters = filters as RestautantFilters;
 
-  console.log(restaurantFilters);
-
   if (pageParam) query._id = { $lt: pageParam };
 
   if (restaurantFilters?.name) {

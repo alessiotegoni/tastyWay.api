@@ -123,7 +123,7 @@ export const validateRestaurantsQuery = [
       if (pageParam && !isValidObjectId(pageParam))
         throw new Error("L'id dell'ordine deve essere un id di mongoDB valido");
 
-      true;
+      return true;
     }),
 
   query("limit")

@@ -35,8 +35,6 @@ export const verifyAddress = asyncHandler(async (req, res, next) => {
   const lng = results.geometry.location.lng as number; // asse x
   const lat = results.geometry.location.lat as number; // asse y
 
-  console.log(lat, lng);
-
   if (!lat || !lng)
     return res.status(403).json({
       message: "Indirizzo non valido",
