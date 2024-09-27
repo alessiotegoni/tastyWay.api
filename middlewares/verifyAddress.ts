@@ -4,6 +4,11 @@ import asyncHandler from "express-async-handler";
 export const verifyAddress = asyncHandler(async (req, res, next) => {
   const address = req.body.address || req.query.address;
 
+  if (!address)
+    return res.status(403).json({
+      message: "Missing address",
+    });
+
   const { data } = await axios.get(
     `https://maps.googleapis.com/maps/api/geocode/json`,
     {

@@ -5,23 +5,7 @@ import { calcExpectedTime, getItems, uploadImg } from "../lib/utils";
 import { DBOrderItem, RestaurantOrder, RestautantFilters } from "../types";
 
 export const getRestaurants = asyncHandler(async (req, res) => {
-  const { id: restaurantId, pageParam, limit, filters } = req.query;
-
-  if (restaurantId) {
-    const restaurant = await RestaurantSchema.findOne({
-      _id: restaurantId,
-      location: {
-        $near: {
-          $geometry: {
-            type: "Point",
-            coordinates: req.coords,
-          },
-          $maxDistance: 5000,
-        },
-      },
-    }).lean();
-    return res.status(201).json(restaurant);
-  }
+  const { pageParam, limit, filters } = req.query;
 
   // Skip and limit method
 
@@ -92,6 +76,23 @@ export const getRestaurants = asyncHandler(async (req, res) => {
     nextCursor: lastRestaurant ? lastRestaurant._id : null,
   });
 });
+
+export const getRestaurantByName = asyncHandler(async (req, res) => {
+  const { restaurantName } = req.params;
+
+  console.log(restaurantName);
+
+  const restaurant = await RestaurantSchema.findOne(
+    {
+      name: { $regex: new RegExp(restaurantName, "i") },
+    },
+    { updatedAt: 0, ownerId: 0, cuisine: 0, location: 0 }
+  ).lean();
+  return res.status(201).json(restaurant);
+});
+
+// TODO: routes and controller for filtering by food name
+// of restaurant items
 
 export const getMyRestaurant = asyncHandler(async (req, res) => {
   const { id: ownerId } = req.user!;

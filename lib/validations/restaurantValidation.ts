@@ -1,4 +1,4 @@
-import { body, query } from "express-validator";
+import { body, param, query } from "express-validator";
 import { valErrsHandler } from "./errsHandler";
 import { isValidObjectId } from "mongoose";
 import { FoodType } from "../../types";
@@ -108,15 +108,15 @@ export const RestaurantType = [
   "trending",
 ];
 
-export const validateRestaurantsQuery = [
-  ...validateQuery,
-
-  query("address")
+export const validateRestaurantParam = [
+  param("restaurantName")
     .isString()
     .withMessage(
-      "L'indirizzo del ristorante e' obbligatorio e deve essere una stringa"
+      "Il nome del ristorante e' obbligatorio e deve essere una stringa"
     ),
+];
 
+export const validateRestaurantsQuery = [
   query("pageParam")
     .optional()
     .custom((pageParam) => {

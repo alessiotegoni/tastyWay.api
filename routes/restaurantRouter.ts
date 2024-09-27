@@ -4,6 +4,7 @@ import {
   deleteOrder,
   getActiveOrders,
   getMyRestaurant,
+  getRestaurantByName,
   getRestaurantOrders,
   getRestaurants,
   updateOrder,
@@ -16,6 +17,7 @@ import { verifyOrder } from "../middlewares/restaurant/verifyOrder";
 import {
   validateQuery,
   validateRestaurantBody,
+  validateRestaurantParam,
   validateRestaurantsQuery,
 } from "../lib/validations/restaurantValidation";
 import { verifyAddress } from "../middlewares/verifyAddress";
@@ -25,7 +27,8 @@ const imgsUploader = uploadMultImgs();
 
 const router = Router();
 
-router.get("/", validateRestaurantsQuery, verifyAddress, getRestaurants);
+router.get("/", verifyAddress, validateRestaurantsQuery, getRestaurants);
+router.get("/:restaurantName", validateRestaurantParam, getRestaurantByName);
 
 router.use(verifyJWT, checkCmpAccount);
 

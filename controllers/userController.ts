@@ -130,13 +130,10 @@ export const getUserOrders = asyncHandler(async (req, res) => {
 });
 
 export const createOrder = asyncHandler(async (req, res) => {
-  // TODO: verificare che le coordinate dell'ordine siano
-  // vicine alle coordinate del ristorante
-  const {
-    restaurantId,
-    address,
-    itemIds,
-  } = req.body;
+  // TODO: verificare se quello specifico ristorante e' vicino
+  // all'indirizzo immesso dall'utente.
+
+  const { restaurantId, address, itemIds } = req.body;
 
   const restaurant = await RestaurantSchema.findById(restaurantId, {
     _id: 1,
