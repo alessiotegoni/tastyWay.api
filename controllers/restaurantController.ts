@@ -2,13 +2,17 @@ import asyncHandler from "express-async-handler";
 import { OrderSchema, RestaurantSchema, UserSchema } from "../models";
 import { v2 as cloudinary } from "cloudinary";
 import { calcExpectedTime, getItems, uploadImg } from "../lib/utils";
-import { DBOrderItem, RestaurantOrder, RestautantFilters } from "../types";
+import {
+  DBOrderItem,
+  RestaurantItemsFilters,
+  RestaurantOrder,
+  RestautantFilters,
+} from "../types";
 
 export const getRestaurants = asyncHandler(async (req, res) => {
   const { pageParam, limit, filters } = req.query;
 
   // Skip and limit method
-
   // const skip = (Number(page) - 1) * Number(limit);
 
   // const restaurants = await RestaurantSchema.find(
@@ -86,13 +90,43 @@ export const getRestaurantByName = asyncHandler(async (req, res) => {
     {
       name: { $regex: new RegExp(restaurantName, "i") },
     },
-    { updatedAt: 0, ownerId: 0, cuisine: 0, location: 0 }
+    { address: 1, name: 1, deliveryInfo: 1, imageUrl: 1, createdAt: 1 }
   ).lean();
   return res.status(201).json(restaurant);
 });
 
-// TODO: routes and controller for filtering by food name
-// of restaurant items
+export const getRestaurantItems = asyncHandler(async (req, res) => {
+  const { restaurantId } = req.params;
+  const { pageParam, limit, filters } = req.query;
+
+  const itemsFilters = filters as RestaurantItemsFilters;
+
+  const query: any = { _id: restaurantId };
+
+  if (itemsFilters?.name) {
+    const nameRegex = new RegExp(itemsFilters.name, "i");
+    query.items.name = { $regex: nameRegex };
+  }
+  if (itemsFilters?.itemsType?.length)
+    query.items.type = { $in: itemsFilters.itemsType };
+
+  console.log(query);
+
+  const restaurant = await RestaurantSchema.findOne(query, {
+    items: 1,
+  })
+    .sort({ _id: -1 })
+    .limit(Number(limit));
+
+  console.log(restaurant?.items);
+
+  const lastItem = restaurant?.items?.at(-1);
+
+  res.status(200).json({
+    restaurantItems: restaurant?.items,
+    nextCursor: lastItem ? lastItem._id : null,
+  });
+});
 
 export const getMyRestaurant = asyncHandler(async (req, res) => {
   const { id: ownerId } = req.user!;

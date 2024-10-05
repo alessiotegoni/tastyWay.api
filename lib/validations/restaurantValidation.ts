@@ -1,7 +1,11 @@
 import { body, param, query } from "express-validator";
 import { valErrsHandler } from "./errsHandler";
 import { isValidObjectId } from "mongoose";
-import { FoodType } from "../../types";
+import {
+  foodTypes,
+  restaurantType,
+  restaurantItemsTypes,
+} from "../../config/allowedFilters";
 
 const validateItems = [
   body("items.*._id")
@@ -76,44 +80,46 @@ export const validateQuery = [
   valErrsHandler,
 ];
 
-export const FoodTypes = [
-  "pizza",
-  "sushi",
-  "burger",
-  "dessert",
-  "italian",
-  "chinese",
-  "mexican",
-  "indian",
-  "thai",
-  "american",
-  "mediterranean",
-  "vegetarian",
-  "vegan",
-  "fast_food",
-  "sea_food",
-  "bbq",
-  "healthy",
-  "steakhouse",
-  "breakfast",
-  "bakery",
-];
-
-export const RestaurantType = [
-  "cheap",
-  "expensive",
-  "top_rated",
-  "fast_delivery",
-  "new",
-  "trending",
-];
-
 export const validateRestaurantParam = [
   param("restaurantName")
     .isString()
     .withMessage(
       "Il nome del ristorante e' obbligatorio e deve essere una stringa"
     ),
+];
+
+export const validateRestaurantItems = [
+  param("restaurantId")
+    .isMongoId()
+    .isString()
+    .withMessage(
+      "L'id del ristorante e' obbligatorio e deve essere una stringa"
+    ),
+
+  query("pageParam")
+    .optional()
+    .isMongoId()
+    .withMessage("L'id dell'ordine deve essere un id di mongoDB valido"),
+
+  query("limit")
+    .isString()
+    .withMessage(
+      "Il limite di ristorante da caricare deve essere un numero intero"
+    )
+    .toInt(),
+
+  query("filters.name")
+    .optional()
+    .isString()
+    .withMessage("Il nome dell'item e' obbligatorio e deve essere una stringa"),
+
+  query("filters.itemsType")
+    .optional()
+    .isArray({ min: 1 })
+    .isIn(restaurantItemsTypes)
+    .withMessage("Tipo di piatto non valido"),
+
+  valErrsHandler,
 ];
 
 export const validateRestaurantsQuery = [
@@ -143,13 +149,13 @@ export const validateRestaurantsQuery = [
   query("filters.foodType")
     .optional()
     .isArray({ min: 1 })
-    .isIn(FoodTypes)
+    .isIn(foodTypes)
     .withMessage("Filtro foodType non valido"),
 
   query("filters.restaurantTypes")
     .optional()
     .isArray({ min: 1 })
-    .isIn(RestaurantType)
+    .isIn(restaurantType)
     .withMessage("Filtro restaurantType non valido"),
 
   valErrsHandler,

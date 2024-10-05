@@ -144,6 +144,38 @@ export type RestautantFilters = {
   restaurantType: RestaurantType[] | null;
 };
 
+export enum RestaurantItemsTypes {
+  PIZZA = "pizza",
+  BURGER = "burger",
+  PASTA = "pasta",
+  SALAD = "salad",
+  SANDWICH = "sandwich",
+  FLATBREAD = "flatbread",
+  FRIED_FOOD = "fried_food",
+  SUSHI = "sushi",
+  APPETIZERS = "appetizers",
+  DESSERTS = "desserts",
+  DRINKS = "drinks",
+  BBQ = "bbq",
+  SEAFOOD = "seafood",
+  MEAT = "meat",
+  SOUP = "soup",
+  VEGAN = "vegan",
+  VEGETARIAN = "vegetarian",
+  GLUTEN_FREE = "gluten_free",
+  FRUIT = "fruit",
+  TAPAS = "tapas",
+  SANDWICHES = "sandwiches",
+  RICE = "rice",
+  POKE = "poke",
+  MAIN_COURSE = "main_course",
+}
+
+export type RestaurantItemsFilters = {
+  name: string | null;
+  itemsType: RestaurantItemsType[] | null;
+};
+
 // Tutti gli ordini
 
 // declare global {}: Questa dichiarazione indica che stai modificando le dichiarazioni globali in TypeScript, il che significa che stai aggiungendo o modificando qualcosa che dovrebbe essere disponibile in tutto il progetto. In questo caso, stai aggiungendo una nuova proprietà alla classe Request di Express, che rappresenta ogni richiesta HTTP che arriva al server.

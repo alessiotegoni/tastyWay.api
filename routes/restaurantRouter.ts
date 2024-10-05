@@ -5,6 +5,7 @@ import {
   getActiveOrders,
   getMyRestaurant,
   getRestaurantByName,
+  getRestaurantItems,
   getRestaurantOrders,
   getRestaurants,
   updateOrder,
@@ -17,6 +18,7 @@ import { verifyOrder } from "../middlewares/restaurant/verifyOrder";
 import {
   validateQuery,
   validateRestaurantBody,
+  validateRestaurantItems,
   validateRestaurantParam,
   validateRestaurantsQuery,
 } from "../lib/validations/restaurantValidation";
@@ -29,6 +31,7 @@ const router = Router();
 
 router.get("/", verifyAddress, validateRestaurantsQuery, getRestaurants);
 router.get("/:restaurantName", validateRestaurantParam, getRestaurantByName);
+router.get("/:restaurantId/items", validateRestaurantItems, getRestaurantItems);
 
 router.use(verifyJWT, checkCmpAccount);
 
