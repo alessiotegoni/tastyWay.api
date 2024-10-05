@@ -90,9 +90,32 @@ export const getRestaurantByName = asyncHandler(async (req, res) => {
     {
       name: { $regex: new RegExp(restaurantName, "i") },
     },
-    { address: 1, name: 1, deliveryInfo: 1, imageUrl: 1, createdAt: 1 }
+    {
+      address: 1,
+      name: 1,
+      deliveryInfo: 1,
+      imageUrl: 1,
+      createdAt: 1,
+      items: 1,
+    }
   ).lean();
-  return res.status(201).json(restaurant);
+
+  const itemsTypes = restaurant?.items.map((item) => item.type) ?? [];
+
+  let obj = null;
+
+  if (restaurant)
+    obj = {
+      _id: restaurant._id,
+      name: restaurant.name,
+      imageUrl: restaurant.imageUrl,
+      address: restaurant.address,
+      deliveryInfo: restaurant.deliveryInfo,
+      itemsTypes,
+      createdAt: restaurant.createdAt,
+    };
+
+  return res.status(201).json(obj);
 });
 
 export const getRestaurantItems = asyncHandler(async (req, res) => {
@@ -101,26 +124,31 @@ export const getRestaurantItems = asyncHandler(async (req, res) => {
 
   const itemsFilters = filters as RestaurantItemsFilters;
 
-  const query: any = { _id: restaurantId };
+  let projection: any = {};
+
+  if (itemsFilters?.name || itemsFilters?.itemsType?.length) {
+    projection.items = { $elemMatch: {} };
+  }
 
   if (itemsFilters?.name) {
     const nameRegex = new RegExp(itemsFilters.name, "i");
-    query.items.name = { $regex: nameRegex };
+    projection.items.$elemMatch.name = { $regex: nameRegex };
   }
   if (itemsFilters?.itemsType?.length)
-    query.items.type = { $in: itemsFilters.itemsType };
+    projection.items.$elemMatch.type = { $in: itemsFilters.itemsType };
 
-  console.log(query);
+  console.log(projection);
 
-  const restaurant = await RestaurantSchema.findOne(query, {
-    items: 1,
-  })
-    .sort({ _id: -1 })
-    .limit(Number(limit));
+  const restaurant = await RestaurantSchema.findById(
+    restaurantId,
+    projection
+  ).limit(Number(limit));
 
   console.log(restaurant?.items);
 
   const lastItem = restaurant?.items?.at(-1);
+
+  // TODO: add types to each restaurant items in db
 
   res.status(200).json({
     restaurantItems: restaurant?.items,
