@@ -8,6 +8,8 @@ import {
 } from "../lib/utils";
 import { DBOrderItem, SingleOrderItem } from "../types";
 import bcrypt from "bcrypt";
+import Stripe from "stripe";
+import { stripe } from "../config/stripe";
 
 export const getUserOrders = asyncHandler(async (req, res) => {
   const { id: orderId, page, limit } = req.query;
@@ -127,6 +129,39 @@ export const getUserOrders = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json(fullOrders);
+});
+
+export const createCheckoutSession = asyncHandler(async (req, res) => {
+  const { items, restaurantName } = req.body;
+
+  // const { id: userId } = req.user!;
+
+  const lineItems = items.map((item: any) => ({
+    price_data: {
+      currency: "eur",
+      product_data: {
+        name: item.name,
+        images: [
+          item.img ?? "https://cdn-icons-png.flaticon.com/512/3225/3225116.png",
+        ],
+      },
+      unit_amount: item.price * 100,
+    },
+    quantity: item.qnt,
+  }));
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    line_items: lineItems,
+    metadata: { restaurantName },
+    mode: "payment",
+    success_url: `http://localhost:5173/restaurants/${restaurantName}/order-success`,
+    cancel_url: `http://localhost:5173/restaurants/${restaurantName}/order-cancel`,
+  });
+
+  if (!session) return res.status(404);
+
+  res.status(200).json(session.url);
 });
 
 export const createOrder = asyncHandler(async (req, res) => {

@@ -21,8 +21,10 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/auth", authRouter);
 
+// TODO: add verifyJwt middleware
+
 app.use("/api/restaurants", restaurantsRouter);
-app.use("/api/users", verifyJWT, userRouter);
+app.use("/api/users", userRouter);
 
 connectDB()
   .then(() => {

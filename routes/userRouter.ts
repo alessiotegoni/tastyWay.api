@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  createCheckoutSession,
   createOrder,
   deleteUser,
   getUserOrders,
@@ -16,6 +17,7 @@ import {
 import { validateOrderBody } from "../lib/validations/orderValidation";
 import { validateQuery } from "../lib/validations/restaurantValidation";
 import { verifyAddress } from "../middlewares/verifyAddress";
+import { verifyJWT } from "../middlewares/verifyJWT";
 
 const imgUploader = uploadSingleImg();
 
@@ -31,6 +33,8 @@ router.patch(
   updateUserInfo
 );
 router.patch("/profile/security", validateUserSecurityBody, updateUserSecurity);
+
+router.post("/orders/create-checkout-session", createCheckoutSession);
 
 router.use(checkCmpAccount);
 
