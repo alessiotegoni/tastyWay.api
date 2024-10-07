@@ -130,12 +130,22 @@ export const getUserOrders = asyncHandler(async (req, res) => {
 });
 
 export const createOrder = asyncHandler(async (req, res) => {
-  // TODO: verificare se quello specifico ristorante e' vicino
-  // all'indirizzo immesso dall'utente.
+  const { restaurantId, itemIds } = req.body;
 
-  const { restaurantId, address, itemIds } = req.body;
+  const query = {
+    restaurantId,
+    location: {
+      $near: {
+        $geometry: {
+          type: "Point",
+          coordinates: req.coords,
+        },
+        $maxDistance: 5000,
+      },
+    },
+  };
 
-  const restaurant = await RestaurantSchema.findById(restaurantId, {
+  const restaurant = await RestaurantSchema.findOne(query, {
     _id: 1,
     deliveryInfo: 1,
     address: 1,
@@ -144,7 +154,8 @@ export const createOrder = asyncHandler(async (req, res) => {
 
   if (!restaurant)
     return res.status(404).json({
-      message: "Questo ristorante non esiste piu'",
+      message:
+        "Questo ristorante non esiste piu' o non e' presente nella tua zona",
     });
 
   // if (
@@ -167,19 +178,11 @@ export const createOrder = asyncHandler(async (req, res) => {
     restaurant.deliveryInfo!.price
   );
 
-  const normalizedItems: Pick<SingleOrderItem, "_id">[] = [];
-
-  items.forEach((item) => {
-    for (let i = 0; i < item.quantity; i++) {
-      normalizedItems.push(item._id!);
-    }
-  });
-
   await OrderSchema.create({
     customerId: req.user!.id,
     ...req.body,
     totalPrice,
-    items: normalizedItems,
+    items: items.map((i) => i._id!),
   });
 
   res.status(201).json({

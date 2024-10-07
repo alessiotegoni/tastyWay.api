@@ -21,6 +21,8 @@ const imgUploader = uploadSingleImg();
 
 const router = Router();
 
+router.route("/profile").get(getUserProfile).delete(deleteUser);
+
 router.patch(
   "/profile/info",
   imgUploader,
@@ -29,8 +31,6 @@ router.patch(
   updateUserInfo
 );
 router.patch("/profile/security", validateUserSecurityBody, updateUserSecurity);
-
-router.route("/profile").get(getUserProfile).delete(deleteUser);
 
 router.use(checkCmpAccount);
 
