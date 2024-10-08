@@ -49,9 +49,7 @@ router.post(
 
 router.use(checkCmpAccount);
 
-router
-  .route("/orders")
-  .get(validateQuery, getUserOrders)
-  // .post(validateOrderBody, verifyAddress, createOrder);
+router.route("/orders").get(validateQuery, getUserOrders);
+// .post(validateOrderBody, verifyAddress, createOrder);
 
 export default router;
