@@ -3,31 +3,38 @@ import { valErrsHandler } from "./errsHandler";
 
 export const validateOrderBody = [
   body("restaurantId")
-  .notEmpty().withMessage(`L'id del ristorante e' obbligatorio`)
-    .isString().withMessage(`L'id del ristorante deve essere una stringa`),
+    .notEmpty()
+    .withMessage(`L'id del ristorante e' obbligatorio`)
+    .isString()
+    .withMessage(`L'id del ristorante deve essere una stringa`),
 
-  body("address.street")
-    .notEmpty().withMessage("La via è obbligatoria")
-    .isString().withMessage("La via deve essere una stringa"),
+  body("restaurantName")
+    .isString()
+    .withMessage("Il nome del ristorante deve essere una stringa"),
 
-  body("address.city")
-    .notEmpty().withMessage("La città è obbligatoria")
-    .isString().withMessage("La città deve essere una stringa"),
+  body("deliveryPrice")
+    .isFloat({ min: 0 })
+    .withMessage("Il prezzo di consegna deve essere un numero (minimo 0)"),
 
-  body("address.country")
-    .notEmpty().withMessage("Il paese è obbligatorio")
-    .isString().withMessage("Il paese deve essere una stringa"),
+  body("address")
+    .isString()
+    .withMessage("L'indirizzo deve essere una stringa"),
 
-  body("itemIds")
-    .notEmpty().withMessage(`E' obbligatorio scegliere almeno un piatto`)
-    .isArray({ min: 1 }).withMessage(`E' obbligatorio scegliere almeno un piatto`)
-    .custom((itemIds) => {
-        for (const itemId of itemIds) {
-          if (typeof itemId !== 'string')
-                throw new Error("I nomi degli items devono essere stringhe");
-        }
-        return true;
-      }),
+  body("items.*._id")
+    .isMongoId()
+    .withMessage("L'id dell'item deve essere un id di mongo valido"),
 
-  valErrsHandler
+  body("items.*.name")
+    .isString()
+    .withMessage("Il nome dell'item deve essere una stringa"),
+
+  body("items.*.price")
+    .isFloat({ min: 0 })
+    .withMessage("Il prezzo dell'item deve essere un numero (minimo 0)"),
+
+  body("items.*.qnt")
+    .isFloat({ min: 1 })
+    .withMessage("La quantita' dell'item deve essere un numero (minimo 1)"),
+
+  valErrsHandler,
 ];

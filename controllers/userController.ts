@@ -10,6 +10,7 @@ import { DBOrderItem, SingleOrderItem } from "../types";
 import bcrypt from "bcrypt";
 import Stripe from "stripe";
 import { stripe } from "../config/stripe";
+import { Request, Response } from "express";
 
 export const getUserOrders = asyncHandler(async (req, res) => {
   const { id: orderId, page, limit } = req.query;
@@ -132,11 +133,18 @@ export const getUserOrders = asyncHandler(async (req, res) => {
 });
 
 export const createCheckoutSession = asyncHandler(async (req, res) => {
-  const { items, restaurantName } = req.body;
+  const {
+    userId,
+    restaurantId,
+    restaurantName,
+    items,
+    deliveryPrice,
+    address,
+  } = req.body;
 
   // const { id: userId } = req.user!;
 
-  const lineItems = items.map((item: any) => ({
+  const line_items = items.map((item: any) => ({
     price_data: {
       currency: "eur",
       product_data: {
@@ -150,13 +158,34 @@ export const createCheckoutSession = asyncHandler(async (req, res) => {
     quantity: item.qnt,
   }));
 
+  const CLIENT_URL = process.env.CLIENT_URL!;
+
+  const metadata = {
+    userId,
+    restaurantId,
+    itemIds: items.map((i: any) => i._id),
+    address,
+  };
+
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    line_items: lineItems,
-    metadata: { restaurantName },
+    payment_method_types: ["card", "paypal"],
+    shipping_options: [
+      {
+        shipping_rate_data: {
+          display_name: "Delivery",
+          type: "fixed_amount",
+          fixed_amount: {
+            amount: deliveryPrice * 100,
+            currency: "eur",
+          },
+        },
+      },
+    ],
+    line_items,
+    metadata,
     mode: "payment",
-    success_url: `http://localhost:5173/restaurants/${restaurantName}/order-success`,
-    cancel_url: `http://localhost:5173/restaurants/${restaurantName}/order-cancel`,
+    success_url: `${CLIENT_URL}/restaurants/${restaurantName}?success=true`,
+    cancel_url: `${CLIENT_URL}/restaurants/${restaurantName}?success=false`,
   });
 
   if (!session) return res.status(404);
@@ -164,66 +193,90 @@ export const createCheckoutSession = asyncHandler(async (req, res) => {
   res.status(200).json(session.url);
 });
 
-export const createOrder = asyncHandler(async (req, res) => {
-  const { restaurantId, itemIds } = req.body;
+export const stripeWebhookHandler = asyncHandler(async (req, res, next) => {
+  const sig = req.headers["stripe-signature"]!;
+
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+  const event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+
+  if (event?.type !== "checkout.session.completed")
+    return res.status(500).json({ message: "Errore durante il pagamento" });
+
+  console.log(event.data.object.metadata);
+
+  const { restaurantId, userId, address, itemIds } =
+    event.data.object.metadata!;
+
+  const order = {
+    customerId: userId,
+    restaurantId,
+    address,
+    itemIds,
+  };
+
+  await createOrder({ body: order }, res);
+});
+
+export const createOrder = async (req: Partial<Request>, res: Response) => {
+  const { customerId, restaurantId, itemIds, address } = req.body;
 
   const query = {
     restaurantId,
-    location: {
-      $near: {
-        $geometry: {
-          type: "Point",
-          coordinates: req.coords,
-        },
-        $maxDistance: 5000,
-      },
-    },
+    // location: {
+    //   $near: {
+    //     $geometry: {
+    //       type: "Point",
+    //       coordinates: req.coords,
+    //     },
+    //     $maxDistance: 5000,
+    //   },
+    // },
   };
 
-  const restaurant = await RestaurantSchema.findOne(query, {
-    _id: 1,
-    deliveryInfo: 1,
-    address: 1,
-    items: 1,
-  }).lean();
+  try {
+    const restaurant = await RestaurantSchema.findOne(query, {
+      _id: 1,
+      deliveryInfo: 1,
+      address: 1,
+      items: 1,
+    }).lean();
 
-  if (!restaurant)
-    return res.status(404).json({
-      message:
-        "Questo ristorante non esiste piu' o non e' presente nella tua zona",
+    if (!restaurant)
+      throw new Error(
+        "Questo ristorante non esiste piu' o non e' presente nella tua zona"
+      );
+
+    const items = getItems(itemIds, restaurant.items as DBOrderItem[], "FULL");
+
+    if (!items.length)
+      return res.status(404).json({
+        message:
+          "I piatti che hai ordinato sono stati eliminati dal ristorante",
+      });
+
+    const totalPrice = calcTotalPrice(
+      items as SingleOrderItem[],
+      restaurant.deliveryInfo!.price
+    );
+
+    await OrderSchema.create({
+      customerId,
+      restaurantId,
+      totalPrice,
+      address,
+      items: items.map((i) => i._id!),
     });
 
-  // if (
-  //   restaurant.address!.city !== city ||
-  //   restaurant.address!.country !== country
-  // )
-  //   return res.status(404).json({
-  //     message: "Questo ristorante non e' nella tua citta'",
-  //   });
-
-  const items = getItems(itemIds, restaurant.items as DBOrderItem[], "FULL");
-
-  if (!items.length)
-    return res.status(404).json({
-      message: "I piatti che hai ordinato sono stati eliminati dal ristorante",
+    res.status(201).json({
+      message: "Ordine creato con successo!",
     });
-
-  const totalPrice = calcTotalPrice(
-    items as SingleOrderItem[],
-    restaurant.deliveryInfo!.price
-  );
-
-  await OrderSchema.create({
-    customerId: req.user!.id,
-    ...req.body,
-    totalPrice,
-    items: items.map((i) => i._id!),
-  });
-
-  res.status(201).json({
-    message: "Ordine creato con successo!",
-  });
-});
+  } catch (err: any) {
+    res
+      .status(404)
+      .json({ message: err.message ?? "Errore nella creazione dell'ordine" });
+  }
+};
 
 export const getUserProfile = asyncHandler(async (req, res) => {
   const { id: userId } = req.user!;

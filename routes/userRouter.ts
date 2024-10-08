@@ -1,10 +1,11 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import {
   createCheckoutSession,
   createOrder,
   deleteUser,
   getUserOrders,
   getUserProfile,
+  stripeWebhookHandler,
   updateUserInfo,
   updateUserSecurity,
 } from "../controllers/userController";
@@ -34,13 +35,23 @@ router.patch(
 );
 router.patch("/profile/security", validateUserSecurityBody, updateUserSecurity);
 
-router.post("/orders/create-checkout-session", createCheckoutSession);
+router.post(
+  "/orders/create-checkout-session",
+  validateOrderBody,
+  createCheckoutSession
+);
+
+router.post(
+  "/orders/checkout-webhook",
+  express.raw({ type: "*/*" }),
+  stripeWebhookHandler
+);
 
 router.use(checkCmpAccount);
 
 router
   .route("/orders")
   .get(validateQuery, getUserOrders)
-  .post(validateOrderBody, verifyAddress, createOrder);
+  // .post(validateOrderBody, verifyAddress, createOrder);
 
 export default router;

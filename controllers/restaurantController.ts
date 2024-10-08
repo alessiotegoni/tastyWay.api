@@ -84,8 +84,6 @@ export const getRestaurants = asyncHandler(async (req, res) => {
 export const getRestaurantByName = asyncHandler(async (req, res) => {
   const { restaurantName } = req.params;
 
-  console.log(restaurantName);
-
   const restaurant = await RestaurantSchema.findOne(
     {
       name: { $regex: new RegExp(restaurantName, "i") },
@@ -137,14 +135,10 @@ export const getRestaurantItems = asyncHandler(async (req, res) => {
   if (itemsFilters?.itemsType?.length)
     projection.items.$elemMatch.type = { $in: itemsFilters.itemsType };
 
-  console.log(projection);
-
   const restaurant = await RestaurantSchema.findById(
     restaurantId,
     projection
   ).limit(Number(limit));
-
-  console.log(restaurant?.items);
 
   const lastItem = restaurant?.items?.at(-1);
 

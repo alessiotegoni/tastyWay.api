@@ -29,9 +29,7 @@ export const validateUserBody = [
       `Il numero di telefono dell'utente deve essere un numero di telefono italiano valido`
     ),
 
-  body("address")
-    .isString()
-    .withMessage("L'indirizzo e' obbligatorio"),
+  body("address").isString().withMessage("L'indirizzo e' obbligatorio"),
 
   valErrsHandler,
 ];
