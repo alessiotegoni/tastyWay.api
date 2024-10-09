@@ -24,6 +24,14 @@ const imgUploader = uploadSingleImg();
 
 const router = Router();
 
+router.post(
+  "/orders/checkout-webhook",
+  express.raw({ type: "*/*" }),
+  stripeWebhookHandler
+);
+
+router.use(express.json(), verifyJWT);
+
 router.route("/profile").get(getUserProfile).delete(deleteUser);
 
 router.patch(
@@ -38,18 +46,12 @@ router.patch("/profile/security", validateUserSecurityBody, updateUserSecurity);
 router.post(
   "/orders/create-checkout-session",
   validateOrderBody,
+  verifyAddress,
   createCheckoutSession
-);
-
-router.post(
-  "/orders/checkout-webhook",
-  express.raw({ type: "*/*" }),
-  stripeWebhookHandler
 );
 
 router.use(checkCmpAccount);
 
 router.route("/orders").get(validateQuery, getUserOrders);
-// .post(validateOrderBody, verifyAddress, createOrder);
 
 export default router;

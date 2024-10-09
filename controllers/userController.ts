@@ -133,16 +133,10 @@ export const getUserOrders = asyncHandler(async (req, res) => {
 });
 
 export const createCheckoutSession = asyncHandler(async (req, res) => {
-  const {
-    userId,
-    restaurantId,
-    restaurantName,
-    items,
-    deliveryPrice,
-    address,
-  } = req.body;
+  const { restaurantId, restaurantName, items, deliveryPrice, address } =
+    req.body;
 
-  // const { id: userId } = req.user!;
+  const { id: userId } = req.user!;
 
   const line_items = items.map((item: any) => ({
     price_data: {
@@ -163,8 +157,9 @@ export const createCheckoutSession = asyncHandler(async (req, res) => {
   const metadata = {
     userId,
     restaurantId,
-    itemIds: items.map((i: any) => i._id),
+    itemIds: JSON.stringify(items.map((i: any) => i._id)),
     address,
+    coords: JSON.stringify(req.coords),
   };
 
   const session = await stripe.checkout.sessions.create({
@@ -203,16 +198,15 @@ export const stripeWebhookHandler = asyncHandler(async (req, res, next) => {
   if (event?.type !== "checkout.session.completed")
     return res.status(500).json({ message: "Errore durante il pagamento" });
 
-  console.log(event.data.object.metadata);
-
-  const { restaurantId, userId, address, itemIds } =
+  const { restaurantId, userId, itemIds, address, coords } =
     event.data.object.metadata!;
 
   const order = {
     customerId: userId,
     restaurantId,
     address,
-    itemIds,
+    itemIds: JSON.parse(itemIds),
+    coords: JSON.parse(coords),
   };
 
   await createOrder({ body: order }, res);
@@ -222,16 +216,16 @@ export const createOrder = async (req: Partial<Request>, res: Response) => {
   const { customerId, restaurantId, itemIds, address } = req.body;
 
   const query = {
-    restaurantId,
-    // location: {
-    //   $near: {
-    //     $geometry: {
-    //       type: "Point",
-    //       coordinates: req.coords,
-    //     },
-    //     $maxDistance: 5000,
-    //   },
-    // },
+    _id: restaurantId,
+    location: {
+      $near: {
+        $geometry: {
+          type: "Point",
+          coordinates: req.body.coords,
+        },
+        $maxDistance: 5000,
+      },
+    },
   };
 
   try {
@@ -242,18 +236,20 @@ export const createOrder = async (req: Partial<Request>, res: Response) => {
       items: 1,
     }).lean();
 
+    console.log("restaurant", restaurant);
+
     if (!restaurant)
       throw new Error(
         "Questo ristorante non esiste piu' o non e' presente nella tua zona"
       );
 
     const items = getItems(itemIds, restaurant.items as DBOrderItem[], "FULL");
+    console.log(items);
 
     if (!items.length)
-      return res.status(404).json({
-        message:
-          "I piatti che hai ordinato sono stati eliminati dal ristorante",
-      });
+      throw new Error(
+        "I piatti che hai ordinato sono stati eliminati dal ristorante"
+      );
 
     const totalPrice = calcTotalPrice(
       items as SingleOrderItem[],
@@ -268,13 +264,9 @@ export const createOrder = async (req: Partial<Request>, res: Response) => {
       items: items.map((i) => i._id!),
     });
 
-    res.status(201).json({
-      message: "Ordine creato con successo!",
-    });
+    console.log("Ordine creato con successo!");
   } catch (err: any) {
-    res
-      .status(404)
-      .json({ message: err.message ?? "Errore nella creazione dell'ordine" });
+    console.error(err.message ?? "Errore nella creazione dell'ordine");
   }
 };
 
