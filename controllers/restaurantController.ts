@@ -241,10 +241,13 @@ export const createRestaurant = asyncHandler(async (req, res) => {
 
     const uploadedItems = await Promise.all(itemPromises);
     fullItems.push(...uploadedItems);
-  } catch (err) {
+  } catch (err: any) {
     return res
       .status(400)
-      .json({ message: "Errore nel caricamento delle immagini dei piatti" });
+      .json({
+        message:
+          err.message ?? "Errore nel caricamento delle immagini dei piatti",
+      });
   }
 
   await RestaurantSchema.create({

@@ -133,12 +133,57 @@ export const getUserOrders = asyncHandler(async (req, res) => {
 export const getUserActiveOrders = asyncHandler(async (req, res) => {
   const { id: userId } = req.user!;
 
-  const activeOrders = await OrderSchema.find({
-    customerId: userId,
-    status: { $nin: ["Consegnato"] },
+  const activeOrders = await OrderSchema.find(
+    {
+      customerId: userId,
+      status: { $nin: ["Consegnato"] },
+    },
+    { customerId: 0 }
+  ).lean();
+
+  const fullOrdersPromise = activeOrders.map(async (order) => {
+    const orderRestaurant = await RestaurantSchema.findById(order._id, {
+      name: 1,
+      items: 1,
+      deliveryInfo: 1,
+    }).lean();
+
+    if (!orderRestaurant)
+      return res.status(404).json({
+        message: `Il ristorante che si e' occupato di questo ordine non esiste piu`,
+      });
+
+    const items = getItems(
+      order.items,
+      orderRestaurant.items as DBOrderItem[],
+      "FULL"
+    );
+
+    const expectedTime = calcExpectedTime(
+      order.createdAt,
+      orderRestaurant.deliveryInfo!.time
+    );
+
+    const totalPrice = calcTotalPrice(
+      items,
+      orderRestaurant.deliveryInfo!.price
+    );
+
+    return {
+      id: order._id,
+      status: order.status,
+      expectedTime,
+      items,
+      totalPrice,
+      restaurant: {
+        name: orderRestaurant.name,
+      },
+    };
   });
 
-  res.status(200).json(activeOrders);
+  const fullOrders = await Promise.all(fullOrdersPromise);
+
+  res.status(200).json(fullOrders);
 });
 
 export const createCheckoutSession = asyncHandler(async (req, res) => {
@@ -218,10 +263,10 @@ export const stripeWebhookHandler = asyncHandler(async (req, res, next) => {
     coords: JSON.parse(coords),
   };
 
-  await createOrder({ body: order }, res);
+  await createOrder({ body: order });
 });
 
-export const createOrder = async (req: Partial<Request>, res: Response) => {
+export const createOrder = async (req: Partial<Request>) => {
   const { customerId, restaurantId, itemIds, address } = req.body;
 
   const query = {
@@ -245,15 +290,12 @@ export const createOrder = async (req: Partial<Request>, res: Response) => {
       items: 1,
     }).lean();
 
-    console.log("restaurant", restaurant);
-
     if (!restaurant)
       throw new Error(
         "Questo ristorante non esiste piu' o non e' presente nella tua zona"
       );
 
     const items = getItems(itemIds, restaurant.items as DBOrderItem[], "FULL");
-    console.log(items);
 
     if (!items.length)
       throw new Error(

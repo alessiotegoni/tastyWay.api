@@ -5,7 +5,7 @@
   "main": "main.ts",
   "scripts": {
     "dev": "concurrently \"nodemon\" \"npm run stripe\"",
-    "stripe": "stripe listen --forward-to localhost:3000/api/orders/checkout-webhook"
+    "stripe": "stripe listen --forward-to localhost:3000/api/users/orders/checkout-webhook"
   },
   "keywords": [],
   "author": "",

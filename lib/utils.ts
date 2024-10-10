@@ -80,11 +80,11 @@ export const calcTotalPrice = (
   items.reduce((total, item) => total + item.quantity * item.price, 0) +
   deliveryPrice;
 
-export const getItems = (
+export const getItems = <T>(
   orderItemIds: string[],
   restaurantItems: DBOrderItem[],
   type: "FULL" | "NAME_QUANTITY"
-) => {
+): T[] => {
   const items: (OrderItem | SingleOrderItem)[] = [];
 
   const itemsQnts = calcItemsQuantities(orderItemIds);
