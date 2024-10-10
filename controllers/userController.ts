@@ -44,11 +44,7 @@ export const getUserOrders = asyncHandler(async (req, res) => {
           "Il ristoranre che si e' occupato del tuo ordine non esiste piu",
       });
 
-    const items = getItems(
-      order.items,
-      restaurant.items as DBOrderItem[],
-      "FULL"
-    );
+    const items = getItems(order.items, restaurant.items, "FULL");
     const expectedTime =
       order.status !== "Consegnato"
         ? calcExpectedTime(createdAt, restaurant.deliveryInfo!.time)
@@ -153,11 +149,7 @@ export const getUserActiveOrders = asyncHandler(async (req, res) => {
         message: `Il ristorante che si e' occupato di questo ordine non esiste piu`,
       });
 
-    const items = getItems(
-      order.items,
-      orderRestaurant.items as DBOrderItem[],
-      "FULL"
-    );
+    const items = getItems<"FULL">(order.items, orderRestaurant.items, "FULL");
 
     const expectedTime = calcExpectedTime(
       order.createdAt,
@@ -295,17 +287,14 @@ export const createOrder = async (req: Partial<Request>) => {
         "Questo ristorante non esiste piu' o non e' presente nella tua zona"
       );
 
-    const items = getItems(itemIds, restaurant.items as DBOrderItem[], "FULL");
+    const items = getItems<"FULL">(itemIds, restaurant.items, "FULL");
 
     if (!items.length)
       throw new Error(
         "I piatti che hai ordinato sono stati eliminati dal ristorante"
       );
 
-    const totalPrice = calcTotalPrice(
-      items as SingleOrderItem[],
-      restaurant.deliveryInfo!.price
-    );
+    const totalPrice = calcTotalPrice(items, restaurant.deliveryInfo!.price);
 
     await OrderSchema.create({
       customerId,

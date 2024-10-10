@@ -9,6 +9,7 @@ import {
 import { Response } from "express";
 import multer from "multer";
 import { v2 as cloudinary, UploadApiOptions } from "cloudinary";
+import { Types } from "mongoose";
 
 type UserJwtType = UserAccessToken | UserRefreshToken;
 
@@ -73,46 +74,69 @@ export const calcItemsQuantities = (array: string[]) => {
   return itemQuantities;
 };
 
-export const calcTotalPrice = (
-  items: SingleOrderItem[],
-  deliveryPrice: number
-) =>
+type partialItem = {
+  _id: Types.ObjectId;
+  name: string;
+  quantity: number;
+};
+
+type fullItem = { img?: string; price: number } & partialItem;
+
+export const calcTotalPrice = (items: fullItem[], deliveryPrice: number) =>
   items.reduce((total, item) => total + item.quantity * item.price, 0) +
   deliveryPrice;
 
-export const getItems = <T>(
+type ItemType<T> = T extends "FULL"
+  ? fullItem
+  : partialItem;
+
+export const getItems = <T extends "FULL" | "NAME_QUANTITY">(
   orderItemIds: string[],
   restaurantItems: DBOrderItem[],
-  type: "FULL" | "NAME_QUANTITY"
-): T[] => {
-  const items: (OrderItem | SingleOrderItem)[] = [];
+  type: T
+): ItemType<T>[] => {
+  const items: ItemType<T>[] = [];
 
   const itemsQnts = calcItemsQuantities(orderItemIds);
 
-  Object.keys(itemsQnts).forEach((itemId) =>
+  Object.keys(itemsQnts).forEach((itemId) => {
     restaurantItems.forEach(({ _id, name, img, price }) => {
       if (_id?.toString() !== itemId) return;
 
-      const baseItem = {
+      const baseItem: partialItem = {
         _id,
         name,
         quantity: itemsQnts[itemId],
       };
 
-      const item =
-        type === "NAME_QUANTITY" ? baseItem : { ...baseItem, img, price };
+      let item: ItemType<T>;
+      if (type === "FULL") {
+        item = {
+          ...baseItem,
+          img,
+          price,
+        } as ItemType<T>;
+      } else {
+        item = baseItem as ItemType<T>;
+      }
 
       items.push(item);
-    })
-  );
+    });
+  });
 
   return items;
 };
 
-export const uploadImg = async (img: Express.Multer.File, uploadOptions?: UploadApiOptions) => {
+export const uploadImg = async (
+  img: Express.Multer.File,
+  uploadOptions?: UploadApiOptions
+) => {
   const base64Image = Buffer.from(img.buffer).toString("base64");
   const dataURI = `data:${img.mimetype};base64,${base64Image}`;
-  const uploadResponse = await cloudinary.uploader.upload(dataURI, uploadOptions);
+  const uploadResponse = await cloudinary.uploader.upload(
+    dataURI,
+    uploadOptions
+  );
 
   return uploadResponse.secure_url;
 };
