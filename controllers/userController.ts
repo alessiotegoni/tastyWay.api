@@ -225,7 +225,7 @@ export const createCheckoutSession = asyncHandler(async (req, res) => {
     line_items,
     metadata,
     mode: "payment",
-    success_url: `${CLIENT_URL}/restaurants/${restaurantName}?success=true`,
+    success_url: `${CLIENT_URL}/active-orders`,
     cancel_url: `${CLIENT_URL}/restaurants/${restaurantName}?success=false`,
   });
 

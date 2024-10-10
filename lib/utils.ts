@@ -74,21 +74,14 @@ export const calcItemsQuantities = (array: string[]) => {
   return itemQuantities;
 };
 
-type partialItem = {
-  _id: Types.ObjectId;
-  name: string;
-  quantity: number;
-};
-
-type fullItem = { img?: string; price: number } & partialItem;
-
-export const calcTotalPrice = (items: fullItem[], deliveryPrice: number) =>
+export const calcTotalPrice = (
+  items: SingleOrderItem[],
+  deliveryPrice: number
+) =>
   items.reduce((total, item) => total + item.quantity * item.price, 0) +
   deliveryPrice;
 
-type ItemType<T> = T extends "FULL"
-  ? fullItem
-  : partialItem;
+type ItemType<T> = T extends "FULL" ? SingleOrderItem : OrderItem;
 
 export const getItems = <T extends "FULL" | "NAME_QUANTITY">(
   orderItemIds: string[],
@@ -103,22 +96,20 @@ export const getItems = <T extends "FULL" | "NAME_QUANTITY">(
     restaurantItems.forEach(({ _id, name, img, price }) => {
       if (_id?.toString() !== itemId) return;
 
-      const baseItem: partialItem = {
+      const baseItem: OrderItem = {
         _id,
         name,
         quantity: itemsQnts[itemId],
       };
 
-      let item: ItemType<T>;
-      if (type === "FULL") {
-        item = {
-          ...baseItem,
-          img,
-          price,
-        } as ItemType<T>;
-      } else {
-        item = baseItem as ItemType<T>;
-      }
+      const item =
+        type === "FULL"
+          ? ({
+              ...baseItem,
+              img,
+              price,
+            } as ItemType<T>)
+          : (baseItem as ItemType<T>);
 
       items.push(item);
     });
