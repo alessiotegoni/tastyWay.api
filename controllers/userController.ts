@@ -135,14 +135,19 @@ export const getUserActiveOrders = asyncHandler(async (req, res) => {
       status: { $ne: "Consegnato" },
     },
     { customerId: 0 }
-  ).lean();
+  )
+    .lean()
+    .sort({ _id: -1 });
 
   const fullOrdersPromise = activeOrders.map(async (order) => {
-    const orderRestaurant = await RestaurantSchema.findById(order._id, {
-      name: 1,
-      items: 1,
-      deliveryInfo: 1,
-    }).lean();
+    const orderRestaurant = await RestaurantSchema.findById(
+      order.restaurantId,
+      {
+        name: 1,
+        items: 1,
+        deliveryInfo: 1,
+      }
+    ).lean();
 
     if (!orderRestaurant)
       return res.status(404).json({
