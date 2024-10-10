@@ -8,7 +8,6 @@ import {
 } from "../lib/utils";
 import { DBOrderItem, SingleOrderItem } from "../types";
 import bcrypt from "bcrypt";
-import Stripe from "stripe";
 import { stripe } from "../config/stripe";
 import { Request, Response } from "express";
 
@@ -50,9 +49,8 @@ export const getUserOrders = asyncHandler(async (req, res) => {
       restaurant.items as DBOrderItem[],
       "FULL"
     );
-
     const expectedTime =
-      order.status !== "consegnato"
+      order.status !== "Consegnato"
         ? calcExpectedTime(createdAt, restaurant.deliveryInfo!.time)
         : null;
 
@@ -130,6 +128,17 @@ export const getUserOrders = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json(fullOrders);
+});
+
+export const getUserActiveOrders = asyncHandler(async (req, res) => {
+  const { id: userId } = req.user!;
+
+  const activeOrders = await OrderSchema.find({
+    customerId: userId,
+    status: { $nin: ["Consegnato"] },
+  });
+
+  res.status(200).json(activeOrders);
 });
 
 export const createCheckoutSession = asyncHandler(async (req, res) => {

@@ -15,8 +15,14 @@ const OrderSchema = new Schema(
       trim: true,
     },
     status: {
-      type: String,
-      required: true,
+      type: String, 
+      enum: [
+        "In attesa",
+        "Accettato",
+        "In preparazione",
+        "In consegna",
+        "Consegnato",
+      ],
       trim: true,
       default: "In attesa",
     },

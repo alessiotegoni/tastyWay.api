@@ -63,19 +63,21 @@ export const validateRestaurantBody = [
 ];
 
 export const validateQuery = [
-  query("id").custom((id, { req }) => {
-    if (id && !isValidObjectId(id))
-      throw new Error("L'id dell'ordine deve essere un id di mongoDB valido");
+  query("id")
+    .optional()
+    .custom((id, { req }) => {
+      if (id && !isValidObjectId(id))
+        throw new Error("L'id dell'ordine deve essere un id di mongoDB valido");
 
-    // const { page, limit } = req.query!;
+      // const { page, limit } = req.query!;
 
-    // if (!id && (!page || !limit)) {
-    //   throw new Error(
-    //     "Numero di pagine di ordini da caricare e limite obbligatori"
-    //   );
-    // }
-    return true;
-  }),
+      // if (!id && (!page || !limit)) {
+      //   throw new Error(
+      //     "Numero di pagine di ordini da caricare e limite obbligatori"
+      //   );
+      // }
+      return true;
+    }),
 
   valErrsHandler,
 ];

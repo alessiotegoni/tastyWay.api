@@ -1,8 +1,8 @@
 import express, { Router } from "express";
 import {
   createCheckoutSession,
-  createOrder,
   deleteUser,
+  getUserActiveOrders,
   getUserOrders,
   getUserProfile,
   stripeWebhookHandler,
@@ -52,6 +52,7 @@ router.post(
 
 router.use(checkCmpAccount);
 
-router.route("/orders").get(validateQuery, getUserOrders);
+router.get("/orders", validateQuery, getUserOrders);
+router.get("/active-orders", getUserActiveOrders);
 
 export default router;
