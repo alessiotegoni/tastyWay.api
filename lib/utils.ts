@@ -9,7 +9,6 @@ import {
 import { Response } from "express";
 import multer from "multer";
 import { v2 as cloudinary, UploadApiOptions } from "cloudinary";
-import { Types } from "mongoose";
 
 type UserJwtType = UserAccessToken | UserRefreshToken;
 
@@ -104,14 +103,14 @@ export const getItems = <T extends "FULL" | "NAME_QUANTITY">(
 
       const item =
         type === "FULL"
-          ? ({
+          ? {
               ...baseItem,
               img,
               price,
-            } as ItemType<T>)
-          : (baseItem as ItemType<T>);
+            }
+          : baseItem;
 
-      items.push(item);
+      items.push(item as ItemType<T>);
     });
   });
 

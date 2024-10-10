@@ -132,7 +132,7 @@ export const getUserActiveOrders = asyncHandler(async (req, res) => {
   const activeOrders = await OrderSchema.find(
     {
       customerId: userId,
-      status: { $nin: ["Consegnato"] },
+      status: { $ne: "Consegnato" },
     },
     { customerId: 0 }
   ).lean();

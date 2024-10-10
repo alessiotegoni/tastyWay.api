@@ -32,6 +32,7 @@ export const signIn = asyncHandler(async (req, res) => {
       name: user.name,
       surname: user.surname,
       address: user.address,
+      isCmpAccount: false,
     },
     "1d"
   );
@@ -79,7 +80,10 @@ export const signUp = asyncHandler(async (req, res) => {
     password: hashedPassword,
   });
 
-  const accessToken = signJwt({ id, email, name, surname, address }, "1d");
+  const accessToken = signJwt(
+    { id, email, name, surname, address, isCmpAccount: false },
+    "1d"
+  );
   const refreshToken = signJwt({ id, email }, "30d");
 
   if (!accessToken || !refreshToken)
@@ -120,6 +124,7 @@ export const refreshToken = asyncHandler(
           name: user.name,
           surname: user.surname,
           address: user.address,
+          isCmpAccount: false,
         },
         "1d"
       );

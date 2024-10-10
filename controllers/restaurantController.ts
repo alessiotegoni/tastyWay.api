@@ -242,12 +242,10 @@ export const createRestaurant = asyncHandler(async (req, res) => {
     const uploadedItems = await Promise.all(itemPromises);
     fullItems.push(...uploadedItems);
   } catch (err: any) {
-    return res
-      .status(400)
-      .json({
-        message:
-          err.message ?? "Errore nel caricamento delle immagini dei piatti",
-      });
+    return res.status(400).json({
+      message:
+        err.message ?? "Errore nel caricamento delle immagini dei piatti",
+    });
   }
 
   await RestaurantSchema.create({
@@ -374,9 +372,7 @@ export const getActiveOrders = asyncHandler(async (req, res) => {
     .lean()
     .sort({ _id: -1 });
 
-  const fullOrders = [];
-
-  for (const order of activeOrders) {
+  const ordersPromises = activeOrders.map(async (order) => {
     const customer = await UserSchema.findById(order.customerId, {
       name: 1,
       surname: 1,
@@ -401,9 +397,11 @@ export const getActiveOrders = asyncHandler(async (req, res) => {
       expectedTime,
     };
 
-    fullOrders.push(fullInfo);
-  }
+    return fullInfo;
+  });
 
+  const fullOrders = await Promise.all(ordersPromises);
+  
   res.status(200).json(fullOrders);
 });
 

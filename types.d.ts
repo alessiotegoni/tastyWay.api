@@ -18,6 +18,7 @@ export type UserAccessToken = {
   name: string;
   surname: string;
   address: string;
+  isCmpAccount: boolean;
 };
 
 export type UserRefreshToken = {
@@ -93,7 +94,10 @@ export type SingleOrderItem = {
   price: number;
 } & OrderItem;
 
-export type DBOrderItem = Omit<SingleOrderItem, "quantity">;
+export type DBOrderItem = Omit<SingleOrderItem, "quantity"> & {
+  description: string;
+  type: string;
+};
 
 // Ordine singolo
 
