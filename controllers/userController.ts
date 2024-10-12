@@ -171,6 +171,7 @@ export const getUserActiveOrders = asyncHandler(async (req, res) => {
       status: order.status,
       expectedTime,
       items,
+      address: order.address,
       totalPrice,
       restaurant: {
         name: orderRestaurant.name,
