@@ -13,6 +13,7 @@ import { checkCmpAccount } from "../middlewares/verifyCompanyAccount";
 import { uploadSingleImg } from "../lib/utils";
 import {
   validateUserInfoBody,
+  validateUserOrdersQuery,
   validateUserSecurityBody,
 } from "../lib/validations/userValidation";
 import { validateOrderBody } from "../lib/validations/orderValidation";
@@ -52,7 +53,7 @@ router.post(
 
 router.use(checkCmpAccount);
 
-router.get("/orders", validateQuery, getUserOrders);
+router.get("/orders", validateUserOrdersQuery, getUserOrders);
 router.get("/active-orders", getUserActiveOrders);
 
 export default router;

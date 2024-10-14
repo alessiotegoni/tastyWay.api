@@ -6,13 +6,12 @@ import {
   getItems,
   uploadImg,
 } from "../lib/utils";
-import { DBOrderItem, SingleOrderItem } from "../types";
 import bcrypt from "bcrypt";
 import { stripe } from "../config/stripe";
-import { Request, Response } from "express";
+import { Request } from "express";
 
 export const getUserOrders = asyncHandler(async (req, res) => {
-  const { id: orderId, page, limit } = req.query;
+  const { id: orderId, pageParam, limit } = req.query;
 
   const { id: userId } = req.user!;
 
@@ -44,25 +43,21 @@ export const getUserOrders = asyncHandler(async (req, res) => {
           "Il ristoranre che si e' occupato del tuo ordine non esiste piu",
       });
 
-    const items = getItems(order.items, restaurant.items, "FULL");
+    const items = getItems<"FULL">(order.items, restaurant.items, "FULL");
     const expectedTime =
       order.status !== "Consegnato"
         ? calcExpectedTime(createdAt, restaurant.deliveryInfo!.time)
         : null;
 
-    // TODO: frontend = quanto fetcha tutti gli ordini, filtrare
-    // quelli attivi (diversi da consegnato), se ci sono fetcharli
-    // e metterli nel widget sopra se non ci sono fetchare ultimo ordine
-
     const fullInfo = {
-      _id: _id.toString(),
+      _id,
       status,
       totalPrice,
       createdAt,
       expectedTime,
       items,
       restaurant: {
-        id: restaurant._id.toString(),
+        id: restaurant._id,
         img: restaurant.imageUrl,
         name: restaurant.name,
       },
@@ -71,57 +66,52 @@ export const getUserOrders = asyncHandler(async (req, res) => {
     return res.status(200).json(fullInfo);
   }
 
-  // Skip and limit method
+  const query: any = { customerId: userId, status: "Consegnato" };
 
-  const skip = (Number(page) - 1) * Number(limit);
+  if (pageParam) query._id = { $lt: pageParam };
 
-  const orders = await OrderSchema.find(
-    { customerId: userId },
-    { customerId: 0, address: 0 }
-  )
+  const orders = await OrderSchema.find(query, {
+    customerId: 0,
+    address: 0,
+    status: 0,
+  })
     .lean()
     .sort({ _id: -1 })
-    .skip(skip)
     .limit(Number(limit));
 
-  const fullOrders = [];
+  const ordersPromises = orders.map(async (order) => {
+    const orderRestaurant = await RestaurantSchema.findById(
+      order.restaurantId,
+      {
+        name: 1,
+        imageUrl: 1,
+        items: 1,
+        "deliveryInfo.time": 1,
+      }
+    ).lean();
 
-  for (const {
-    items: orderItems,
-    updatedAt,
-    restaurantId,
-    customerId,
-    address,
-    ...restOrder
-  } of orders) {
-    const orderRestaurant = await RestaurantSchema.findById(restaurantId, {
-      name: 1,
-      imageUrl: 1,
-      items: 1,
-      "deliveryInfo.time": 1,
-    }).lean();
+    if (!orderRestaurant) return;
 
-    if (!orderRestaurant)
-      return res.status(404).json({
-        message: `Il ristorante che si e' occupato di questo ordine non esiste piu`,
-      });
-
-    const items = getItems(
-      orderItems,
-      orderRestaurant.items as DBOrderItem[],
+    const items = getItems<"NAME_QUANTITY">(
+      order.items,
+      orderRestaurant.items,
       "NAME_QUANTITY"
     );
 
-    fullOrders.push({
-      ...restOrder,
+    return {
+      _id: order._id,
       items,
+      totalPrice: order.totalPrice,
+      createdAt: order.createdAt,
       restaurant: {
-        id: restaurantId,
+        id: orderRestaurant._id,
         name: orderRestaurant.name,
         img: orderRestaurant.imageUrl,
       },
-    });
-  }
+    };
+  });
+
+  const fullOrders = await Promise.all(ordersPromises);
 
   res.status(200).json(fullOrders);
 });
@@ -181,7 +171,7 @@ export const getUserActiveOrders = asyncHandler(async (req, res) => {
 
   const fullOrders = await Promise.all(fullOrdersPromise);
 
-  res.status(200).json(fullOrders);
+  res.status(200).json({ orders: fullOrders, type: "USER_ORDERS" });
 });
 
 export const createCheckoutSession = asyncHandler(async (req, res) => {
@@ -232,7 +222,9 @@ export const createCheckoutSession = asyncHandler(async (req, res) => {
     metadata,
     mode: "payment",
     success_url: `${CLIENT_URL}/active-orders`,
-    cancel_url: `${CLIENT_URL}/restaurants/${restaurantName}?success=false`,
+    cancel_url: `${CLIENT_URL}/restaurants/${encodeURIComponent(
+      restaurantName
+    )}?success=false`,
   });
 
   if (!session) return res.status(404);
