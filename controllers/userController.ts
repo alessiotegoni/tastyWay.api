@@ -113,7 +113,9 @@ export const getUserOrders = asyncHandler(async (req, res) => {
 
   const fullOrders = await Promise.all(ordersPromises);
 
-  res.status(200).json(fullOrders);
+  const nextCursor = fullOrders.at(-1)?._id;
+
+  res.status(200).json({ orders: fullOrders, nextCursor });
 });
 
 export const getUserActiveOrders = asyncHandler(async (req, res) => {
@@ -139,10 +141,7 @@ export const getUserActiveOrders = asyncHandler(async (req, res) => {
       }
     ).lean();
 
-    if (!orderRestaurant)
-      return res.status(404).json({
-        message: `Il ristorante che si e' occupato di questo ordine non esiste piu`,
-      });
+    if (!orderRestaurant) return;
 
     const items = getItems<"FULL">(order.items, orderRestaurant.items, "FULL");
 
