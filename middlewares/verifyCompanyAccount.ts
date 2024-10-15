@@ -4,7 +4,7 @@ import { UserSchema } from "../models";
 export const checkCmpAccount = asyncHandler(async (req, res, next) => {
   const { id } = req.user!;
 
-  const user = await UserSchema.findById(id, { isCompanyAccount: 1 });
+  const user = await UserSchema.findById(id, { isCompanyAccount: 1 }).lean();
 
   if (!user) return res.status(404).json({ message: "Utente eliminato" });
 
