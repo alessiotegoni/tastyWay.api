@@ -92,11 +92,7 @@ export const getUserOrders = asyncHandler(async (req, res) => {
 
     if (!orderRestaurant) return;
 
-    const items = getItems<"NAME_QUANTITY">(
-      order.items,
-      orderRestaurant.items,
-      "NAME_QUANTITY"
-    );
+    const items = getItems<"FULL">(order.items, orderRestaurant.items, "FULL");
 
     return {
       _id: order._id,
