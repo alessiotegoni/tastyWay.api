@@ -13,8 +13,6 @@ export const validateSignInBody = [
 ];
 
 export const validateUserBody = [
-  ...validateSignInBody,
-
   body("name")
     .isString()
     .withMessage(`Il nome dell'utente deve essere una stringa`),
@@ -75,8 +73,7 @@ export const validateUserInfoBody = [
 
   body("isCompanyAccount")
     .isBoolean()
-    .withMessage("Il tipo di account deve essere un booleano")
-    .toBoolean(),
+    .withMessage("Il tipo di account deve essere un booleano"),
 
   valErrsHandler,
 ];

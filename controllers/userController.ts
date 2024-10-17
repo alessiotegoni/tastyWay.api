@@ -310,7 +310,9 @@ export const getUserProfile = asyncHandler(async (req, res) => {
     password: 0,
     _id: 0,
     updatedAt: 0,
-    __v: 0,
+    createdAt: 0,
+    profileImg: 0,
+    __v: 0
   }).lean();
 
   if (!user) return res.status(404).json({ message: "Utente non trovato" });

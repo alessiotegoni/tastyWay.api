@@ -17,7 +17,6 @@ import {
   validateUserSecurityBody,
 } from "../lib/validations/userValidation";
 import { validateOrderBody } from "../lib/validations/orderValidation";
-import { validateQuery } from "../lib/validations/restaurantValidation";
 import { verifyAddress } from "../middlewares/verifyAddress";
 import { verifyJWT } from "../middlewares/verifyJWT";
 
@@ -31,17 +30,14 @@ router.post(
   stripeWebhookHandler
 );
 
-router.use(express.json(), verifyJWT);
+router.use(express.json(), verifyJWT, checkCmpAccount);
 
-router.route("/profile").get(getUserProfile).delete(deleteUser);
+router
+  .route("/profile")
+  .get(getUserProfile)
+  .patch(imgUploader, validateUserInfoBody, verifyAddress, updateUserInfo)
+  .delete(deleteUser);
 
-router.patch(
-  "/profile/info",
-  imgUploader,
-  validateUserInfoBody,
-  verifyAddress,
-  updateUserInfo
-);
 router.patch("/profile/security", validateUserSecurityBody, updateUserSecurity);
 
 router.post(
@@ -50,8 +46,6 @@ router.post(
   verifyAddress,
   createCheckoutSession
 );
-
-router.use(checkCmpAccount);
 
 router.get("/orders", validateUserOrdersQuery, getUserOrders);
 router.get("/active-orders", getUserActiveOrders);
