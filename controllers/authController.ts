@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import bcrypt from "bcrypt";
-import { UserSchema } from "../models";
+import { RestaurantSchema, UserSchema } from "../models";
 import { setJwtCookie, signJwt } from "../lib/utils";
 import jwt from "jsonwebtoken";
 import { UserRefreshToken } from "../types";
@@ -24,10 +24,31 @@ export const signIn = asyncHandler(async (req, res) => {
   if (!passwordMatchs)
     return res.status(401).json({ message: "Email o password errata" });
 
+  let restaurantName;
+
+  let imageUrl = user?.profileImg ?? undefined;
+  let createdAt = user.createdAt;
+
+  if (user.isCompanyAccount) {
+    const userRestaurant = await RestaurantSchema.findOne(
+      { ownerId: user._id },
+      { name: 1, imageUrl: 1, createdAt: 1 }
+    ).lean();
+
+    if (userRestaurant) {
+      restaurantName = userRestaurant.name;
+      imageUrl = userRestaurant.imageUrl;
+      createdAt = userRestaurant.createdAt;
+    }
+  }
+
   const accessToken = signJwt(
     {
       id: user._id.toString(),
       email: user.email,
+      restaurantName,
+      imageUrl,
+      createdAt,
       name: user.name,
       surname: user.surname,
       address: user.address,
@@ -80,8 +101,9 @@ export const signUp = asyncHandler(async (req, res) => {
 
   const accessToken = signJwt(
     {
-      id,
-      email,
+      id: user._id.toString(),
+      email: user.email,
+      createdAt: user.createdAt,
       name: user.name,
       surname: user.surname,
       address: user.address,
@@ -123,10 +145,31 @@ export const refreshToken = asyncHandler(
 
       if (!user || user.email !== decodedToken.email) return res.status(401);
 
+      let restaurantName;
+
+      let imageUrl = user?.profileImg ?? undefined;
+      let createdAt = user.createdAt;
+
+      if (user.isCompanyAccount) {
+        const userRestaurant = await RestaurantSchema.findOne(
+          { ownerId: user._id.toString() },
+          { name: 1, imageUrl: 1, createdAt: 1 }
+        ).lean();
+
+        if (userRestaurant) {
+          restaurantName = userRestaurant.name;
+          imageUrl = userRestaurant.imageUrl;
+          createdAt = userRestaurant.createdAt;
+        }
+      }
+
       const accessToken = signJwt(
         {
           id: user._id.toString(),
           email: user.email,
+          restaurantName,
+          imageUrl,
+          createdAt,
           name: user.name,
           surname: user.surname,
           address: user.address,

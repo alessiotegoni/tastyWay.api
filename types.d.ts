@@ -15,10 +15,13 @@ import { Document, Types } from "mongoose";
 export type UserAccessToken = {
   id: string;
   email: string;
+  restaurantName?: string
+  imageUrl?: string
   name: string;
   surname: string;
   address: string;
   isCmpAccount: boolean;
+  createdAt: NativeDate;
 };
 
 export type UserRefreshToken = {
