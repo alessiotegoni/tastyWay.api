@@ -13,7 +13,6 @@ export const signIn = asyncHandler(async (req, res) => {
     { email },
     {
       phoneNumber: 0,
-      isCompanyAccount: 0,
     }
   ).lean();
 
@@ -32,7 +31,7 @@ export const signIn = asyncHandler(async (req, res) => {
       name: user.name,
       surname: user.surname,
       address: user.address,
-      isCmpAccount: false,
+      isCmpAccount: user.isCompanyAccount,
     },
     "1d"
   );
@@ -53,20 +52,17 @@ export const signIn = asyncHandler(async (req, res) => {
 export const signUp = asyncHandler(async (req, res) => {
   const { phoneNumber, email: userEmail, password } = req.body;
 
-  const userExist = await UserSchema.exists({
+  const emailExist = await UserSchema.exists({
     email: { $regex: new RegExp(`^${userEmail.toLowerCase()}$`, "i") },
   }).lean();
 
-  if (userExist)
+  if (emailExist)
     return res
       .status(401)
       .json({ message: `Questa email e' gia' associata ad un'altro account` });
 
-  const user = await UserSchema.findOne(
-    { phoneNumber },
-    { phoneNumber: 1 }
-  ).lean();
-  if (user)
+  const phoneExist = await UserSchema.exists({ phoneNumber }).lean();
+  if (phoneExist)
     return res.status(401).json({
       message: `Questo numero di telefono e' gia' associato ad un'altro account`,
     });
@@ -75,13 +71,22 @@ export const signUp = asyncHandler(async (req, res) => {
 
   const { isCompanyAccount, ...restBody } = req.body;
 
-  const { id, email, name, surname, address } = await UserSchema.create({
+  const user = await UserSchema.create({
     ...restBody,
     password: hashedPassword,
   });
 
+  const { id, email } = user;
+
   const accessToken = signJwt(
-    { id, email, name, surname, address, isCmpAccount: false },
+    {
+      id,
+      email,
+      name: user.name,
+      surname: user.surname,
+      address: user.address,
+      isCmpAccount: user.isCompanyAccount,
+    },
     "1d"
   );
   const refreshToken = signJwt({ id, email }, "30d");
@@ -113,6 +118,7 @@ export const refreshToken = asyncHandler(
         name: 1,
         surname: 1,
         address: 1,
+        isCompanyAccount: 1,
       }).lean();
 
       if (!user || user.email !== decodedToken.email) return res.status(401);
@@ -124,7 +130,7 @@ export const refreshToken = asyncHandler(
           name: user.name,
           surname: user.surname,
           address: user.address,
-          isCmpAccount: false,
+          isCmpAccount: user.isCompanyAccount,
         },
         "1d"
       );
