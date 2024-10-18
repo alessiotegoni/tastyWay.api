@@ -155,7 +155,7 @@ export const getMyRestaurant = asyncHandler(async (req, res) => {
 
   const restaurant = await RestaurantSchema.findOne(
     { ownerId },
-    { ownerId: 0 }
+    { ownerId: 0, createdAt: 0, updatedAt: 0, imageUrl: 0, location: 0, _id: 0 }
   ).lean();
 
   if (!restaurant)
@@ -401,7 +401,7 @@ export const getActiveOrders = asyncHandler(async (req, res) => {
   });
 
   const fullOrders = await Promise.all(ordersPromises);
-  
+
   res.status(200).json(fullOrders);
 });
 

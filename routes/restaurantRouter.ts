@@ -38,7 +38,7 @@ router.use(verifyJWT, checkCmpAccount);
 // Restaurant
 
 router
-  .route("/my")
+  .route("/my/restaurant")
   .get(getMyRestaurant)
   .post(imgsUploader, validateRestaurantBody, verifyAddress, createRestaurant)
   .patch(
