@@ -268,9 +268,10 @@ export const createRestaurant = asyncHandler(async (req, res) => {
 export const updateRestaurant = asyncHandler(async (req, res) => {
   const { name, items } = req.body;
 
-  const nameExist = await RestaurantSchema.exists({ name }).lean();
-
-  console.log(nameExist);
+  const nameExist = await RestaurantSchema.exists({
+    name,
+    _id: { $ne: req.restaurant._id },
+  }).lean();
 
   if (nameExist) {
     res.status(403).json({ message: "Nome gia' utlizzato" });
@@ -278,6 +279,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
   }
 
   const addressExist = await RestaurantSchema.exists({
+    _id: { $ne: req.restaurant._id },
     location: {
       coords: req.coords,
     },
@@ -355,10 +357,6 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
 
   return res.status(201).json({
     message: "Ristorante aggiornato con successo!",
-    restaurant: {
-      restaurantImg: restaurantImgUrl,
-      items: updatedRestaurant.items,
-    },
   });
 });
 
