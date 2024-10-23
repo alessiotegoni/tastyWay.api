@@ -33,18 +33,16 @@ router.post(
 
 router.use(express.json(), verifyJWT);
 
+router
+  .route("/profile")
+  .get(getUserProfile)
+  .patch(imgUploader, validateUserInfoBody, verifyAddress, updateUserInfo);
+
 router.patch("/profile/security", validateUserSecurityBody, updateUserSecurity);
-router.patch(
-  "/profile",
-  imgUploader,
-  validateUserInfoBody,
-  verifyAddress,
-  updateUserInfo
-);
 
 router.use(checkCmpAccount);
 
-router.route("/profile").get(getUserProfile).delete(deleteUser);
+router.delete("/profile", deleteUser);
 
 router.patch("/profile/img", imgUploader, updateUserImg);
 
