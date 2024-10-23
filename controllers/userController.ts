@@ -312,7 +312,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
     updatedAt: 0,
     createdAt: 0,
     profileImg: 0,
-    __v: 0
+    __v: 0,
   }).lean();
 
   if (!user) return res.status(404).json({ message: "Utente non trovato" });
@@ -344,12 +344,7 @@ export const updateUserInfo = asyncHandler(async (req, res) => {
       message: "Non puoi passare da account aziendale a account utente",
     });
 
-  const image = req.file as Express.Multer.File;
-
-  let profileImg = user?.profileImg;
-  if (image) profileImg = await uploadImg(image);
-
-  await user!.updateOne({ ...req.body, profileImg }).lean();
+  await user!.updateOne({ ...req.body }).lean();
 
   res.status(200).json({ message: "Utente modificato con successo" });
 });
@@ -369,6 +364,18 @@ export const updateUserSecurity = asyncHandler(async (req, res) => {
   await user!.updateOne({ password: hashedPassword }).lean();
 
   res.status(200).json({ message: "Password cambiata con successo!" });
+});
+
+export const updateUserImg = asyncHandler(async (req, res) => {
+  const image = req.file;
+
+  if (!image) return res.status(404).json({ message: "Immagine obbligatoria" });
+
+  const profileImg = await uploadImg(image);
+
+  await req.user!.updateOne({ profileImg });
+
+  res.status(201).json({ message: "Immagine aggiornata con successo" });
 });
 
 export const deleteUser = asyncHandler(async (req, res) => {

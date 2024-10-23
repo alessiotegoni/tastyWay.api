@@ -6,6 +6,7 @@ import {
   getUserOrders,
   getUserProfile,
   stripeWebhookHandler,
+  updateUserImg,
   updateUserInfo,
   updateUserSecurity,
 } from "../controllers/userController";
@@ -20,7 +21,7 @@ import { validateOrderBody } from "../lib/validations/orderValidation";
 import { verifyAddress } from "../middlewares/verifyAddress";
 import { verifyJWT } from "../middlewares/verifyJWT";
 
-const imgUploader = uploadSingleImg();
+const imgUploader = uploadSingleImg("userImg");
 
 const router = Router();
 
@@ -39,6 +40,8 @@ router
   .delete(deleteUser);
 
 router.patch("/profile/security", validateUserSecurityBody, updateUserSecurity);
+
+router.patch("/profile/img", imgUploader, updateUserImg);
 
 router.post(
   "/orders/create-checkout-session",

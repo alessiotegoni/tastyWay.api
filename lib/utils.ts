@@ -28,14 +28,14 @@ export const setJwtCookie = (token: string, res: Response) => {
   });
 };
 
-export const uploadSingleImg = () => {
+export const uploadSingleImg = (fieldName: string) => {
   const storage = multer.memoryStorage();
   const upload = multer({
     storage,
     limits: { fileSize: 5 * 1024 * 1024 },
   });
 
-  return upload.single("profileImg");
+  return upload.single(fieldName);
 };
 
 export const uploadMultImgs = () => {

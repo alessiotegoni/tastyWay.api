@@ -10,10 +10,11 @@ import {
   getRestaurants,
   updateOrder,
   updateRestaurant,
+  updateRestaurantImg,
 } from "../controllers/restaurantController";
 import { checkCmpAccount } from "../middlewares/verifyCompanyAccount";
 import { checkOwner } from "../middlewares/restaurant/verifyOwner";
-import { uploadMultImgs } from "../lib/utils";
+import { uploadMultImgs, uploadSingleImg } from "../lib/utils";
 import { verifyOrder } from "../middlewares/restaurant/verifyOrder";
 import {
   validateQuery,
@@ -26,6 +27,7 @@ import { verifyAddress } from "../middlewares/verifyAddress";
 import { verifyJWT } from "../middlewares/verifyJWT";
 
 const imgsUploader = uploadMultImgs();
+const imgUploader = uploadSingleImg("restaurantImg");
 
 const router = Router();
 
@@ -44,11 +46,17 @@ router
   .patch(
     checkOwner,
     imgsUploader,
-    (req: Request) => console.log(req.files),
     validateRestaurantBody,
     verifyAddress,
     updateRestaurant
   );
+
+router.patch(
+  "/my/restaurant/img",
+  checkOwner,
+  imgUploader,
+  updateRestaurantImg
+);
 
 // Orders
 
