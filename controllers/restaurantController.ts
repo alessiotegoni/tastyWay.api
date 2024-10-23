@@ -128,6 +128,9 @@ export const getRestaurantItems = asyncHandler(async (req, res) => {
     projection.items = { $elemMatch: {} };
   }
 
+  //
+  if (pageParam) projection.items.$elemMatch._id = { $lt: pageParam };
+
   if (itemsFilters?.name) {
     const nameRegex = new RegExp(itemsFilters.name, "i");
     projection.items.$elemMatch.name = { $regex: nameRegex };
@@ -275,14 +278,6 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     return res.status(403).json({
       message: `Esiste gia' un ristorante in questa via nella tua citta`,
     });
-
-  // Nel frontend passare tutti gli item, chi ha l'id e l'img attaccarli
-  // al formData tutti e due (!IMPORTANTE) per evitare problemi con
-  // l'update delle immagini degli item, ogni item anche se
-  // l'utente non gli ha cambiato l'immagine, attaccare
-  // al formdata ugualmente un file creato simile al file
-  // cosi' da rispettare l'index di ogni item
-  // (guardare bene cosa ritorna react hook form)
 
   const updatedItems: DBOrderItem[] = [];
   try {

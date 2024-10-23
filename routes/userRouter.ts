@@ -13,9 +13,9 @@ import {
 import { checkCmpAccount } from "../middlewares/verifyCompanyAccount";
 import { uploadSingleImg } from "../lib/utils";
 import {
+  validateUserSecurityBody,
   validateUserInfoBody,
   validateUserOrdersQuery,
-  validateUserSecurityBody,
 } from "../lib/validations/userValidation";
 import { validateOrderBody } from "../lib/validations/orderValidation";
 import { verifyAddress } from "../middlewares/verifyAddress";
@@ -31,15 +31,20 @@ router.post(
   stripeWebhookHandler
 );
 
-router.use(express.json(), verifyJWT, checkCmpAccount);
-
-router
-  .route("/profile")
-  .get(getUserProfile)
-  .patch(imgUploader, validateUserInfoBody, verifyAddress, updateUserInfo)
-  .delete(deleteUser);
+router.use(express.json(), verifyJWT);
 
 router.patch("/profile/security", validateUserSecurityBody, updateUserSecurity);
+router.patch(
+  "/profile",
+  imgUploader,
+  validateUserInfoBody,
+  verifyAddress,
+  updateUserInfo
+);
+
+router.use(checkCmpAccount);
+
+router.route("/profile").get(getUserProfile).delete(deleteUser);
 
 router.patch("/profile/img", imgUploader, updateUserImg);
 

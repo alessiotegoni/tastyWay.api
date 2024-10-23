@@ -329,22 +329,24 @@ export const updateUserInfo = asyncHandler(async (req, res) => {
     phoneNumber: 1,
   });
 
-  const numberExist = await UserSchema.findOne(
-    { phoneNumber },
-    { phoneNumber: 1 }
-  ).lean();
+  if (!user) return res.status(500);
 
-  if (numberExist && numberExist.phoneNumber !== user?.phoneNumber)
+  const numberExist = await UserSchema.exists({
+    phoneNumber,
+    _id: { $ne: user._id },
+  }).lean();
+
+  if (numberExist)
     return res.status(401).json({
       message: "Numero di telefono gia' associato ad un'altro account",
     });
 
-  if (user?.isCompanyAccount && !isCompanyAccount)
+  if (user.isCompanyAccount && !isCompanyAccount)
     return res.status(400).json({
       message: "Non puoi passare da account aziendale a account utente",
     });
 
-  await user!.updateOne({ ...req.body }).lean();
+  await user.updateOne({ ...req.body }).lean();
 
   res.status(200).json({ message: "Utente modificato con successo" });
 });
