@@ -15,8 +15,8 @@ import { Document, Types } from "mongoose";
 export type UserAccessToken = {
   id: string;
   email: string;
-  restaurantName?: string
-  imageUrl?: string
+  restaurantName?: string;
+  imageUrl?: string;
   name: string;
   surname: string;
   address: string;
@@ -66,9 +66,7 @@ declare global {
       user?: UserAccessToken & JwtPayload;
       restaurant: RestaurantDocument;
       order?: OrderDocument;
-      files?: {
-        [fieldname: string]: Express.Multer.File[];
-      };
+      files?: Express.Multer.File[];
       coords?: [number, number];
     }
   }

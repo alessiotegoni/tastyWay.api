@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Request, Router } from "express";
 import {
   createRestaurant,
   deleteOrder,
@@ -44,6 +44,7 @@ router
   .patch(
     checkOwner,
     imgsUploader,
+    (req: Request) => console.log(req.files),
     validateRestaurantBody,
     verifyAddress,
     updateRestaurant

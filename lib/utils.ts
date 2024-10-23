@@ -45,10 +45,7 @@ export const uploadMultImgs = () => {
     limits: { fileSize: 5 * 1024 * 1024 },
   });
 
-  return upload.fields([
-    { name: "restaurantImg", maxCount: 1 },
-    { name: "itemsImg" },
-  ]);
+  return upload.any()
 };
 
 export const calcExpectedTime = (

@@ -200,26 +200,12 @@ export const createRestaurant = asyncHandler(async (req, res) => {
       message: `Esiste gia' un ristorante in questo indirizzo`,
     });
 
-  const restaurantImg = req.files["restaurantImg"]?.at(0);
-  const itemsImgs = req.files["itemsImg"];
+  const itemsImgs = req.files;
 
-  if (!restaurantImg || !itemsImgs?.length) {
+  if (!itemsImgs?.length) {
     return res
       .status(400)
       .json({ message: "Immagini del ristorante e dei piatti obbligatoria" });
-  }
-
-  let restaurantImgUrl;
-  try {
-    const imgUrl = await uploadImg(restaurantImg, {
-      transformation: [{ width: 260, height: 140, crop: "fill" }],
-    });
-
-    restaurantImgUrl = imgUrl;
-  } catch (err) {
-    return res
-      .status(500)
-      .json({ message: "Errore nel caricamento dell'immagine del ristorante" });
   }
 
   const fullItems: Omit<DBOrderItem, "_id">[] = [];
@@ -227,7 +213,9 @@ export const createRestaurant = asyncHandler(async (req, res) => {
   try {
     const itemPromises = items.map(
       async (item: Omit<DBOrderItem, "_id">, index: number) => {
-        const itemImg = req.files!["itemsImg"].at(index);
+        const itemImg = req.files!.find(
+          (file) => file.fieldname === `items[${index}][img]`
+        );
 
         if (!itemImg) {
           throw new Error("Tutti gli item devono avere un'immagine");
@@ -255,13 +243,11 @@ export const createRestaurant = asyncHandler(async (req, res) => {
       coords: req.coords,
     },
     ownerId: req.user!.id,
-    imageUrl: restaurantImgUrl,
     items: fullItems,
   });
 
   res.status(201).json({
     message: "Ristorante creato con successo!",
-    restaurantImg: restaurantImgUrl,
   });
 });
 
@@ -290,23 +276,6 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       message: `Esiste gia' un ristorante in questa via nella tua citta`,
     });
 
-  const restaurantImg = req.files ? req.files["restaurantImg"] : undefined;
-
-  let restaurantImgUrl = req.restaurant.imageUrl;
-
-  if (restaurantImg) {
-    try {
-      console.log("creating new restaurantImg");
-      const imgUrl = await uploadImg(restaurantImg[0]);
-
-      restaurantImgUrl = imgUrl;
-    } catch (error) {
-      return res.status(500).json({
-        message: "Errore nel caricamento dell'immagine del ristorante",
-      });
-    }
-  }
-
   // Nel frontend passare tutti gli item, chi ha l'id e l'img attaccarli
   // al formData tutti e due (!IMPORTANTE) per evitare problemi con
   // l'update delle immagini degli item, ogni item anche se
@@ -318,11 +287,15 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
   const updatedItems: DBOrderItem[] = [];
   try {
     const itemPromises = items.map(async (item: DBOrderItem, index: number) => {
-      const itemImg = req.files!["itemsImg"]?.at(index);
+      const itemImg = req.files?.find(
+        (file) => file.fieldname === `items[${index}][img]`
+      );
 
       if (!itemImg && !item.img) {
         throw new Error("Tutti gli item devono avere un'immagine");
       }
+
+      console.log(item);
 
       if (!itemImg) return item;
 
@@ -347,7 +320,6 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       location: {
         coords: req.coords,
       },
-      imageUrl: restaurantImgUrl,
     },
     { returnDocument: "after", projection: { items: 1 } }
   ).lean();
@@ -358,6 +330,28 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
   return res.status(201).json({
     message: "Ristorante aggiornato con successo!",
   });
+});
+
+export const updateRestaurantImg = asyncHandler(async (req, res) => {
+  const restaurantImg = req.file;
+
+  let restaurantImgUrl = req.restaurant.imageUrl;
+
+  if (restaurantImg) {
+    try {
+      const imgUrl = await uploadImg(restaurantImg);
+
+      restaurantImgUrl = imgUrl;
+    } catch (error) {
+      return res.status(500).json({
+        message: "Errore nel caricamento dell'immagine del ristorante",
+      });
+    }
+  }
+
+  await req.restaurant.updateOne({ imageUrl: restaurantImgUrl });
+
+  res.json({ message: "Immagine aggiornata con successo" });
 });
 
 export const getActiveOrders = asyncHandler(async (req, res) => {

@@ -55,8 +55,8 @@ export const validateRestaurantBody = [
     }),
 
   body("items")
-    .isArray({ min: 1 })
-    .withMessage(`Gli items devono essere un array con almeno un elemento`),
+    .isArray({ min: 3 })
+    .withMessage(`Gli items devono essere un array con almeno 3 elementi`),
   ...validateItems,
 
   valErrsHandler,
