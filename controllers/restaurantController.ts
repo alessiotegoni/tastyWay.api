@@ -295,8 +295,6 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
         throw new Error("Tutti gli item devono avere un'immagine");
       }
 
-      console.log(item);
-
       if (!itemImg) return item;
 
       const itemImgUrl = await uploadImg(itemImg);
