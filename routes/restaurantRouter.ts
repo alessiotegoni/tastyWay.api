@@ -40,7 +40,7 @@ router.use(verifyJWT, checkCmpAccount);
 // Restaurant
 
 router
-  .route("/my")
+  .route("/my/restaurant")
   .get(getMyRestaurant)
   .post(imgsUploader, validateRestaurantBody, verifyAddress, createRestaurant)
   .patch(
@@ -52,7 +52,7 @@ router
   );
 
 router.patch(
-  "/my/img",
+  "/my/restaurant/img",
   checkOwner,
   imgUploader,
   updateRestaurantImg
@@ -62,10 +62,10 @@ router.patch(
 
 router.use(checkOwner, verifyOrder);
 
-router.get("/my/active-orders", getActiveOrders);
+router.get("/my/restaurant/active-orders", getActiveOrders);
 
 router
-  .route("/my/orders")
+  .route("/my/restaurant/orders")
   .get(validateQuery, getRestaurantOrders)
   .patch(updateOrder)
   .delete(deleteOrder);

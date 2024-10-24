@@ -376,7 +376,7 @@ export const getActiveOrders = asyncHandler(async (req, res) => {
     const fullInfo = {
       customerSurname: customer.surname,
       orderId: order._id.toString(),
-      street: order.address,
+      address: order.address,
       status: order.status,
       totalPrice: order.totalPrice,
       expectedTime,
