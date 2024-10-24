@@ -387,7 +387,7 @@ export const getActiveOrders = asyncHandler(async (req, res) => {
 
   const fullOrders = await Promise.all(ordersPromises);
 
-  res.status(200).json(fullOrders);
+  res.status(200).json({ orders: fullOrders, type: "RESTAURANT_ORDERS" });
 });
 
 export const getRestaurantOrders = asyncHandler(async (req, res) => {
