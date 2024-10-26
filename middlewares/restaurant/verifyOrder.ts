@@ -6,7 +6,7 @@ import { OrderDocument } from "../../types";
 // Verify if order the order is from that restaurant
 
 export const verifyOrder = asyncHandler(async (req, res, next) => {
-  const { orderId } = req.query;
+  const { id: orderId } = req.query;
 
   if (orderId) {
     const order: OrderDocument | null = await OrderSchema.findById(orderId);

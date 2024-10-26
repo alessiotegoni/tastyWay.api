@@ -311,7 +311,8 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       ...req.body,
       items: updatedItems,
       location: {
-        coords: req.coords,
+        type: "Point",
+        coordinates: req.coords,
       },
     },
     { returnDocument: "after", projection: { items: 1 } }
