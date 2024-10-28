@@ -56,3 +56,11 @@ export const restaurantItemsTypes = [
   "poke",
   "main_course",
 ];
+
+export const ordersStatus = [
+  "In attesa",
+  "Accettato",
+  "In preparazione",
+  "In consegna",
+  "Consegnato",
+];

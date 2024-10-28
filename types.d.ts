@@ -181,6 +181,18 @@ export type RestaurantItemsFilters = {
   itemsType: RestaurantItemsType[] | null;
 };
 
+export type OrderStatus =
+  | "In attesa"
+  | "Accettato"
+  | "In preparazione"
+  | "In consegna"
+  | "Consegnato";
+
+export type RestaurantOrdersFilters = {
+  statusTypes: OrderStatus[];
+  orderInfo: string;
+};
+
 // Tutti gli ordini
 
 // declare global {}: Questa dichiarazione indica che stai modificando le dichiarazioni globali in TypeScript, il che significa che stai aggiungendo o modificando qualcosa che dovrebbe essere disponibile in tutto il progetto. In questo caso, stai aggiungendo una nuova proprietà alla classe Request di Express, che rappresenta ogni richiesta HTTP che arriva al server.

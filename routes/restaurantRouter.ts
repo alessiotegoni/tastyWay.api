@@ -6,6 +6,7 @@ import {
   getMyRestaurant,
   getRestaurantByName,
   getRestaurantItems,
+  getRestaurantOrderById,
   getRestaurantOrders,
   getRestaurants,
   updateOrder,
@@ -21,6 +22,7 @@ import {
   validateRestaurantBody,
   validateRestaurantItems,
   validateRestaurantParam,
+  validateRestaurantsOrdersQuery,
   validateRestaurantsQuery,
 } from "../lib/validations/restaurantValidation";
 import { verifyAddress } from "../middlewares/verifyAddress";
@@ -64,9 +66,11 @@ router.use(checkOwner, verifyOrder);
 
 router.get("/my/restaurant/active-orders", getActiveOrders);
 
+router.get("/my/restaurant/order/:orderId", getRestaurantOrderById);
+
 router
   .route("/my/restaurant/orders")
-  .get(validateQuery, getRestaurantOrders)
+  .get(validateRestaurantsOrdersQuery, getRestaurantOrders)
   .patch(updateOrder)
   .delete(deleteOrder);
 

@@ -5,6 +5,7 @@ import {
   foodTypes,
   restaurantType,
   restaurantItemsTypes,
+  ordersStatus,
 } from "../../config/allowedFilters";
 
 const validateItems = [
@@ -159,6 +160,37 @@ export const validateRestaurantsQuery = [
     .isArray({ min: 1 })
     .isIn(restaurantType)
     .withMessage("Filtro restaurantType non valido"),
+
+  valErrsHandler,
+];
+
+export const validateRestaurantsOrdersQuery = [
+  query("pageParam")
+    .optional()
+    .custom((pageParam) => {
+      if (pageParam && !isValidObjectId(pageParam))
+        throw new Error("L'id dell'ordine deve essere un id di mongoDB valido");
+
+      return true;
+    }),
+
+  query("limit")
+    .isString()
+    .withMessage(
+      "Il limite di ristorante da caricare deve essere un numero intero"
+    )
+    .toInt(),
+
+  query("filters.statusTypes")
+    .optional()
+    .isArray({ min: 1 })
+    .isIn(ordersStatus)
+    .withMessage("Stato dell'ordine non valido"),
+
+  query("filters.orderInfo")
+    .optional()
+    .isString()
+    .withMessage("Info dell'ordine non valida"),
 
   valErrsHandler,
 ];

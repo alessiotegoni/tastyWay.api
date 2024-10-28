@@ -6,8 +6,10 @@ import {
   DBOrderItem,
   RestaurantItemsFilters,
   RestaurantOrder,
+  RestaurantOrdersFilters,
   RestautantFilters,
 } from "../types";
+import { isValidObjectId } from "mongoose";
 
 export const getRestaurants = asyncHandler(async (req, res) => {
   const { pageParam, limit, filters } = req.query;
@@ -392,77 +394,35 @@ export const getActiveOrders = asyncHandler(async (req, res) => {
 });
 
 export const getRestaurantOrders = asyncHandler(async (req, res) => {
-  const { id: orderId, page, limit } = req.query;
-
-  if (orderId) {
-    const customer = await UserSchema.findById(req.order!.customerId, {
-      name: 1,
-      surname: 1,
-    }).lean();
-
-    if (!customer)
-      return res
-        .status(404)
-        .json({ message: `L'utente che ha creato l'ordine non esiste piu` });
-
-    const { id, address, status, totalPrice, createdAt } = req.order!;
-
-    const restaurant = req.restaurant;
-
-    if (!restaurant)
-      return res
-        .status(404)
-        .json({ message: "Il tuo ristorante non esiste piu" });
-
-    const items = getItems(req.order!.items, restaurant.items, "FULL");
-
-    const expectedTime = calcExpectedTime(
-      createdAt,
-      restaurant.deliveryInfo!.time
-    );
-
-    const fullInfo: RestaurantOrder = {
-      clientFullName: `${customer.name} ${customer.surname}`,
-      orderId: id,
-      address,
-      status,
-      totalPrice,
-      expectedTime,
-      items,
-    };
-
-    return res.status(200).json(fullInfo);
-  }
-
-  // All orders
+  const { pageParam, limit, filters } = req.query;
 
   const restaurant = req.restaurant;
 
-  const skip = (Number(page) - 1) * Number(limit);
+  // const skip = (Number(page) - 1) * Number(limit);
 
-  const orders = await OrderSchema.find({ restaurantId: restaurant._id })
+  const query: any = { restaurantId: restaurant._id };
+
+  if (pageParam) query._id = { $lt: pageParam };
+
+  const restaurantOrderFilter = (filters as RestaurantOrdersFilters) ?? {};
+
+  const { statusTypes, orderInfo } = restaurantOrderFilter;
+
+  if (statusTypes.length)
+    query.status = { $in: restaurantOrderFilter.statusTypes };
+
+  const foundOrders: any[] = await OrderSchema.find(query)
     .lean()
     .sort({ _id: -1 })
-    .skip(skip)
     .limit(Number(limit));
 
-  const fullOrders: RestaurantOrder[] = [];
-
-  for (const order of orders) {
+  const ordersPromises = foundOrders.map(async (order) => {
     const customer = await UserSchema.findById(order.customerId, {
       name: 1,
       surname: 1,
-    }).lean();
+    });
 
-    if (!customer)
-      return res
-        .status(404)
-        .json({ message: `L'utente che ha creato l'ordine non esiste piu` });
-
-    if (!restaurant)
-      return res
-        .status(404)
-        .json({ message: "Il tuo ristorante non esiste piu" });
+    if (!customer) return;
 
     const items = getItems(order.items, restaurant.items, "NAME_QUANTITY");
 
@@ -481,10 +441,66 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
       items,
     };
 
-    fullOrders.push(fullInfo);
+    return fullInfo;
+  });
+
+  let fullOrders = await Promise.all(ordersPromises);
+
+  if (orderInfo) {
+    fullOrders = fullOrders.filter(
+      (o) =>
+        o?.clientFullName.includes(orderInfo) || o?.address.includes(orderInfo)
+    );
   }
 
   res.status(200).json(fullOrders);
+});
+
+export const getRestaurantOrderById = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+
+  if (!orderId || !isValidObjectId(orderId))
+    return res
+      .status(400)
+      .json({ message: "Id dell'ordine non presente o invalido" });
+
+  const customer = await UserSchema.findById(req.order!.customerId, {
+    name: 1,
+    surname: 1,
+  }).lean();
+
+  if (!customer)
+    return res
+      .status(404)
+      .json({ message: `L'utente che ha creato l'ordine non esiste piu` });
+
+  const { id, address, status, totalPrice, createdAt } = req.order!;
+
+  const restaurant = req.restaurant;
+
+  if (!restaurant)
+    return res
+      .status(404)
+      .json({ message: "Il tuo ristorante non esiste piu" });
+
+  const items = getItems(req.order!.items, restaurant.items, "FULL");
+
+  const expectedTime = calcExpectedTime(
+    createdAt,
+    restaurant.deliveryInfo!.time
+  );
+
+  const fullInfo: RestaurantOrder = {
+    clientFullName: `${customer.name} ${customer.surname}`,
+    orderId: id,
+    address,
+    status,
+    totalPrice,
+    expectedTime,
+    items,
+  };
+
+  return res.status(200).json(fullInfo);
 });
 
 export const updateOrder = asyncHandler(async (req, res) => {
