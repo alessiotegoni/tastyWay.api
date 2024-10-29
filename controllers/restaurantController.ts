@@ -408,7 +408,7 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
 
   const { statusTypes, orderInfo } = restaurantOrderFilter;
 
-  if (statusTypes.length)
+  if (statusTypes?.length)
     query.status = { $in: restaurantOrderFilter.statusTypes };
 
   const foundOrders: any[] = await OrderSchema.find(query)
@@ -453,7 +453,11 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
     );
   }
 
-  res.status(200).json(fullOrders);
+  const lastOrder = fullOrders.at(-1);
+
+  const nextCursor = lastOrder ? lastOrder.orderId : null;
+
+  res.status(200).json({ orders: fullOrders, nextCursor });
 });
 
 export const getRestaurantOrderById = asyncHandler(async (req, res) => {
