@@ -62,16 +62,21 @@ router.patch(
 
 // Orders
 
-router.use(checkOwner, verifyOrder);
+router.use(checkOwner);
 
 router.get("/my/restaurant/active-orders", getActiveOrders);
 
-router.get("/my/restaurant/order/:orderId", getRestaurantOrderById);
+router
+  .route("/my/restaurant/order/:orderId")
+  .all(verifyOrder)
+  .get(getRestaurantOrderById)
+  .patch(updateOrder)
+  .delete(deleteOrder);
 
 router
   .route("/my/restaurant/orders")
-  .get(validateRestaurantsOrdersQuery, getRestaurantOrders)
-  .patch(updateOrder)
-  .delete(deleteOrder);
+  .get(validateRestaurantsOrdersQuery, getRestaurantOrders);
+
+// router.use(verifyOrder)
 
 export default router;
