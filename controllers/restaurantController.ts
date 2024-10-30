@@ -449,12 +449,12 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
   if (orderInfo) {
     fullOrders = fullOrders.filter(
       (o) =>
-        o?.clientFullName.includes(orderInfo) || o?.address.includes(orderInfo)
+        o?.clientFullName.toLowerCase().includes(orderInfo.toLowerCase()) ||
+        o?.address.toLowerCase().includes(orderInfo.toLowerCase())
     );
   }
 
   const lastOrder = fullOrders.at(-1);
-
   const nextCursor = lastOrder ? lastOrder.orderId : null;
 
   res.status(200).json({ orders: fullOrders, nextCursor });
