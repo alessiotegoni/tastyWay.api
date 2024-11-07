@@ -178,7 +178,7 @@ export enum RestaurantItemsTypes {
 
 export type RestaurantItemsFilters = {
   name: string | null;
-  itemsType: RestaurantItemsType[] | null;
+  itemsTypes: RestaurantItemsType[] | null;
 };
 
 export type OrderStatus =

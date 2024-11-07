@@ -4,12 +4,13 @@ import { v2 as cloudinary } from "cloudinary";
 import { calcExpectedTime, getItems, uploadImg } from "../lib/utils";
 import {
   DBOrderItem,
+  RestaurantDocument,
   RestaurantItemsFilters,
   RestaurantOrder,
   RestaurantOrdersFilters,
   RestautantFilters,
 } from "../types";
-import { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 
 export const getRestaurants = asyncHandler(async (req, res) => {
   const { pageParam, limit, filters } = req.query;
@@ -100,22 +101,23 @@ export const getRestaurantByName = asyncHandler(async (req, res) => {
     }
   ).lean();
 
-  const itemsTypes = restaurant?.items.map((item) => item.type) ?? [];
-
-  let obj = null;
-
-  if (restaurant)
-    obj = {
-      _id: restaurant._id,
-      name: restaurant.name,
-      imageUrl: restaurant.imageUrl,
-      address: restaurant.address,
-      deliveryInfo: restaurant.deliveryInfo,
-      itemsTypes,
-      createdAt: restaurant.createdAt,
-    };
-
-  return res.status(201).json(obj);
+  return res.status(200).json(
+    restaurant
+      ? {
+          _id: restaurant._id,
+          name: restaurant.name,
+          imageUrl: restaurant.imageUrl,
+          address: restaurant.address,
+          deliveryInfo: restaurant.deliveryInfo,
+          itemsTypes: restaurant.items
+            .filter(
+              (item, _, arr) => arr.indexOf(item) === arr.lastIndexOf(item)
+            )
+            .map((i) => i.type),
+          createdAt: restaurant.createdAt,
+        }
+      : null
+  );
 });
 
 export const getRestaurantItems = asyncHandler(async (req, res) => {
@@ -124,33 +126,74 @@ export const getRestaurantItems = asyncHandler(async (req, res) => {
 
   const itemsFilters = filters as RestaurantItemsFilters;
 
-  let projection: any = {};
+  // let projection: any = {};
 
-  if (itemsFilters?.name || itemsFilters?.itemsType?.length) {
-    projection.items = { $elemMatch: {} };
-  }
+  // if (itemsFilters?.name || itemsFilters?.itemsTypes?.length) {
+  //   projection.items = { $elemMatch: {} };
+  // }
 
-  //
-  if (pageParam) projection.items.$elemMatch._id = { $lt: pageParam };
+  // if (pageParam) projection.items.$elemMatch._id = { $lt: pageParam };
+
+  // if (itemsFilters?.name) {
+  //   const nameRegex = new RegExp(itemsFilters.name, "i");
+  //   projection.items.$elemMatch.name = { $regex: nameRegex };
+  // }
+
+  // if (itemsFilters?.itemsTypes?.length)
+  //   projection.items.$elemMatch.type = { $in: itemsFilters.itemsTypes };
+
+  // const restaurant = await RestaurantSchema.findById(
+  //   restaurantId,
+  //   projection
+  // ).limit(Number(limit));
+
+  const itemConditions: any[] = [];
 
   if (itemsFilters?.name) {
-    const nameRegex = new RegExp(itemsFilters.name, "i");
-    projection.items.$elemMatch.name = { $regex: nameRegex };
+    itemConditions.push({
+      $regexMatch: {
+        input: "$$item.name",
+        regex: itemsFilters.name,
+        options: "i",
+      },
+    });
   }
-  if (itemsFilters?.itemsType?.length)
-    projection.items.$elemMatch.type = { $in: itemsFilters.itemsType };
 
-  const restaurant = await RestaurantSchema.findById(
-    restaurantId,
-    projection
-  ).limit(Number(limit));
+  if (itemsFilters?.itemsTypes && itemsFilters?.itemsTypes?.length) {
+    itemConditions.push({ $in: ["$$item.type", itemsFilters.itemsTypes] });
+  }
+
+  const itemFilterCondition = itemConditions.length
+    ? { $and: itemConditions }
+    : true;
+
+  console.log(itemsFilters);
+
+  const [restaurant] = await RestaurantSchema.aggregate<RestaurantDocument>([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(restaurantId),
+      },
+    },
+    {
+      $project: {
+        items: {
+          $filter: {
+            input: "$items",
+            as: "item",
+            cond: itemFilterCondition,
+          },
+        },
+      },
+    },
+  ]);
+
+  console.log(restaurant);
 
   const lastItem = restaurant?.items?.at(-1);
 
-  // TODO: add types to each restaurant items in db
-
   res.status(200).json({
-    restaurantItems: restaurant?.items,
+    restaurantItems: restaurant?.items ?? [],
     nextCursor: lastItem ? lastItem._id : null,
   });
 });
