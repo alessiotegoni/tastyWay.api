@@ -17,7 +17,7 @@ const restaurantModel = new Schema(
     },
     imageUrl: {
       type: String,
-      required: true,
+      default: null,
     },
     address: {
       type: String,
@@ -62,6 +62,6 @@ const restaurantModel = new Schema(
   { timestamps: true }
 );
 
-restaurantModel.index({ location: "2dsphere" })
+restaurantModel.index({ location: "2dsphere" });
 
 export default model("restaurants", restaurantModel);

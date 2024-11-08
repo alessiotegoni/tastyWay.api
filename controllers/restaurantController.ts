@@ -288,7 +288,7 @@ export const createRestaurant = asyncHandler(async (req, res) => {
     ...req.body,
     location: {
       type: "Point",
-      coords: req.coords,
+      coordinates: req.coords,
     },
     ownerId: req.user!.id,
     items: fullItems,
@@ -337,7 +337,17 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
 
       if (!itemImg) return item;
 
-      const itemImgUrl = await uploadImg(itemImg);
+      const itemImgUrl = await uploadImg(itemImg, {
+        transformation: {
+          width: 800,
+          height: 800,
+          crop: "fill",
+          dpr: "auto",
+          quality: "auto",
+          format: "auto",
+          aspect_ratio: "1:1",
+        },
+      });
 
       return { ...item, img: itemImgUrl };
     });
@@ -378,9 +388,20 @@ export const updateRestaurantImg = asyncHandler(async (req, res) => {
 
   if (restaurantImg) {
     try {
-      const imgUrl = await uploadImg(restaurantImg);
+      const imgUrl = await uploadImg(restaurantImg, {
+        transformation: {
+          width: 800,
+          height: 800,
+          crop: "fill",
+          dpr: "auto",
+          quality: "auto",
+          format: "auto",
+          aspect_ratio: "4:3",
+        },
+      });
 
       restaurantImgUrl = imgUrl;
+      await req.restaurant.updateOne({ imageUrl: restaurantImgUrl });
     } catch (error) {
       return res.status(500).json({
         message: "Errore nel caricamento dell'immagine del ristorante",
@@ -388,9 +409,10 @@ export const updateRestaurantImg = asyncHandler(async (req, res) => {
     }
   }
 
-  await req.restaurant.updateOne({ imageUrl: restaurantImgUrl });
-
-  res.json({ message: "Immagine aggiornata con successo" });
+  res.json({
+    message: "Immagine aggiornata con successo",
+    imageUrl: restaurantImgUrl,
+  });
 });
 
 export const getActiveOrders = asyncHandler(async (req, res) => {
