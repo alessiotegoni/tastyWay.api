@@ -234,9 +234,6 @@ export const createRestaurant = asyncHandler(async (req, res) => {
   if (nameExist)
     return res.status(401).json({ message: "Questo ristorante esiste già" });
 
-  // TODO: dal middleware per la verifica dell'address passa alla richiesta le coordinate
-  // e checka se esiste gia un ristorante a quelle coordinate e aggiungi alla creaione dello schema
-
   const addressExist = await RestaurantSchema.exists({
     location: {
       coords: req.coords,
