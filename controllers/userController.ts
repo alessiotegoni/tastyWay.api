@@ -8,28 +8,23 @@ import {
 } from "../lib/utils";
 import bcrypt from "bcrypt";
 import { stripe } from "../config/stripe";
-import { Request } from "express";
 
 export const getUserOrders = asyncHandler(async (req, res) => {
   const { id: orderId, pageParam, limit } = req.query;
-
   const { id: userId } = req.user!;
 
   if (orderId) {
-    const order = await OrderSchema.findById(orderId).lean();
+    const order = await OrderSchema.findOne({
+      _id: orderId,
+      customerId: userId,
+    }).lean();
 
-    if (!order)
-      return res
-        .status(404)
-        .json({ message: "Ordine cancellato o non esistente" });
-
-    if (order.customerId.toString() !== userId)
-      return res
-        .status(401)
-        .json({ message: "L'ordine non e' di tua proprieta" });
+    if (!order) {
+      res.status(404).json({ message: "Ordine cancellato o non esistente" });
+      return;
+    }
 
     const { _id, status, totalPrice, createdAt } = order;
-
     const restaurant = await RestaurantSchema.findById(order.restaurantId, {
       items: 1,
       "deliveryInfo.time": 1,
@@ -37,11 +32,13 @@ export const getUserOrders = asyncHandler(async (req, res) => {
       name: 1,
     }).lean();
 
-    if (!restaurant)
-      return res.status(404).json({
+    if (!restaurant) {
+      res.status(404).json({
         message:
-          "Il ristoranre che si e' occupato del tuo ordine non esiste piu",
+          "Il ristorante che si è occupato del tuo ordine non esiste più",
       });
+      return;
+    }
 
     const items = getItems<"FULL">(order.items, restaurant.items, "FULL");
     const expectedTime =
@@ -63,7 +60,7 @@ export const getUserOrders = asyncHandler(async (req, res) => {
       },
     };
 
-    return res.status(200).json(fullInfo);
+    res.status(200).json(fullInfo);
   }
 
   const query: any = { customerId: userId, status: "Consegnato" };
@@ -108,7 +105,6 @@ export const getUserOrders = asyncHandler(async (req, res) => {
   });
 
   const fullOrders = await Promise.all(ordersPromises);
-
   const nextCursor = fullOrders.at(-1)?._id;
 
   res.status(200).json({ orders: fullOrders, nextCursor });
@@ -171,7 +167,6 @@ export const getUserActiveOrders = asyncHandler(async (req, res) => {
 
 export const createCheckoutSession = asyncHandler(async (req, res) => {
   const { restaurantId, itemsIds, address } = req.body;
-
   const { id: userId } = req.user!;
 
   const query = {
@@ -194,18 +189,22 @@ export const createCheckoutSession = asyncHandler(async (req, res) => {
     items: 1,
   }).lean();
 
-  if (!restaurant)
-    return res.status(404).json({
+  if (!restaurant) {
+    res.status(404).json({
       message:
-        "Questo ristorante non esiste piu' o non e' presente nella tua zona",
+        "Questo ristorante non esiste più o non è presente nella tua zona",
     });
+    return;
+  }
 
   const items = getItems<"FULL">(itemsIds, restaurant.items, "FULL");
 
-  if (!items.length)
-    return res.status(400).json({
+  if (!items.length) {
+    res.status(400).json({
       message: "I piatti che hai ordinato sono stati eliminati dal ristorante",
     });
+    return;
+  }
 
   const line_items = items.map((item) => ({
     price_data: {
@@ -256,10 +255,10 @@ export const createCheckoutSession = asyncHandler(async (req, res) => {
     )}?failed=true`,
   });
 
-  if (!session)
-    return res
-      .status(404)
-      .json({ message: "Errore nella creazione della sessione" });
+  if (!session) {
+    res.status(404).json({ message: "Errore nella creazione della sessione" });
+    return;
+  }
 
   res.status(200).json(session.url);
 });
@@ -271,8 +270,10 @@ export const stripeWebhookHandler = asyncHandler(async (req, res) => {
 
   const event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
 
-  if (event?.type !== "checkout.session.completed")
-    return res.status(500).json({ message: "Errore durante il pagamento" });
+  if (event?.type !== "checkout.session.completed") {
+    res.status(500).json({ message: "Errore durante il pagamento" });
+    return;
+  }
 
   const { restaurantId, userId, itemsIds, totalPrice, address } =
     event.data.object.metadata!;
@@ -315,7 +316,10 @@ export const getUserProfile = asyncHandler(async (req, res) => {
     __v: 0,
   }).lean();
 
-  if (!user) return res.status(404).json({ message: "Utente non trovato" });
+  if (!user) {
+    res.status(404).json({ message: "Utente non trovato" });
+    return;
+  }
 
   res.status(200).json(user);
 });
@@ -329,22 +333,29 @@ export const updateUserInfo = asyncHandler(async (req, res) => {
     phoneNumber: 1,
   });
 
-  if (!user) return res.status(500);
+  if (!user) {
+    res.status(500);
+    return;
+  }
 
   const numberExist = await UserSchema.exists({
     phoneNumber,
     _id: { $ne: user._id },
   }).lean();
 
-  if (numberExist)
-    return res.status(401).json({
+  if (numberExist) {
+    res.status(401).json({
       message: "Numero di telefono gia' associato ad un'altro account",
     });
+    return;
+  }
 
-  if (user.isCompanyAccount && !isCompanyAccount)
-    return res.status(400).json({
+  if (user.isCompanyAccount && !isCompanyAccount) {
+    res.status(400).json({
       message: "Non puoi passare da account aziendale a account utente",
     });
+    return;
+  }
 
   await user.updateOne({ ...req.body }).lean();
 
@@ -358,8 +369,10 @@ export const updateUserSecurity = asyncHandler(async (req, res) => {
 
   const passwordsMatch = await bcrypt.compare(oldPassword, user!.password);
 
-  if (!passwordsMatch)
-    return res.status(401).json({ message: "Le password non corrispondono" });
+  if (!passwordsMatch) {
+    res.status(401).json({ message: "Le password non corrispondono" });
+    return;
+  }
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
@@ -371,7 +384,10 @@ export const updateUserSecurity = asyncHandler(async (req, res) => {
 export const updateUserImg = asyncHandler(async (req, res) => {
   const image = req.file;
 
-  if (!image) return res.status(404).json({ message: "Immagine obbligatoria" });
+  if (!image) {
+    res.status(404).json({ message: "Immagine obbligatoria" });
+    return;
+  }
 
   const profileImg = await uploadImg(image);
 

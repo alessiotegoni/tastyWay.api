@@ -24,9 +24,7 @@ export const foodTypes = [
 export const restaurantType = [
   "cheap",
   "expensive",
-  "top_rated",
   "fast_delivery",
-  "new",
   "trending",
 ];
 

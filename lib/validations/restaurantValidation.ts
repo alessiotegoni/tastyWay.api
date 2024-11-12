@@ -99,18 +99,6 @@ export const validateRestaurantItems = [
       "L'id del ristorante e' obbligatorio e deve essere una stringa"
     ),
 
-  query("pageParam")
-    .optional()
-    .isMongoId()
-    .withMessage("L'id dell'ordine deve essere un id di mongoDB valido"),
-
-  query("limit")
-    .isString()
-    .withMessage(
-      "Il limite di ristorante da caricare deve essere un numero intero"
-    )
-    .toInt(),
-
   query("filters.name")
     .optional()
     .isString()

@@ -16,16 +16,19 @@ export const signIn = asyncHandler(async (req, res) => {
     }
   ).lean();
 
-  if (!user)
-    return res.status(401).json({ message: `Email o password errata` });
+  if (!user) {
+    res.status(401).json({ message: `Email o password errata` });
+    return;
+  }
 
   const passwordMatchs = await bcrypt.compare(password, user.password);
 
-  if (!passwordMatchs)
-    return res.status(401).json({ message: "Email o password errata" });
+  if (!passwordMatchs) {
+    res.status(401).json({ message: "Email o password errata" });
+    return;
+  }
 
   let restaurantName;
-
   let imageUrl = user?.profileImg ?? undefined;
   let createdAt = user.createdAt;
 
@@ -62,8 +65,9 @@ export const signIn = asyncHandler(async (req, res) => {
     "17d"
   );
 
-  if (!accessToken || !refreshToken)
+  if (!accessToken || !refreshToken) {
     throw Error("Error while generating jwt token");
+  }
 
   setJwtCookie(refreshToken, res);
 
@@ -77,16 +81,20 @@ export const signUp = asyncHandler(async (req, res) => {
     email: { $regex: new RegExp(`^${userEmail.toLowerCase()}$`, "i") },
   }).lean();
 
-  if (emailExist)
-    return res
+  if (emailExist) {
+    res
       .status(401)
       .json({ message: `Questa email e' gia' associata ad un'altro account` });
+    return;
+  }
 
   const phoneExist = await UserSchema.exists({ phoneNumber }).lean();
-  if (phoneExist)
-    return res.status(401).json({
+  if (phoneExist) {
+    res.status(401).json({
       message: `Questo numero di telefono e' gia' associato ad un'altro account`,
     });
+    return;
+  }
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -113,20 +121,23 @@ export const signUp = asyncHandler(async (req, res) => {
   );
   const refreshToken = signJwt({ id, email }, "30d");
 
-  if (!accessToken || !refreshToken)
+  if (!accessToken || !refreshToken) {
     throw Error("Error while generating jwt token");
+  }
 
   setJwtCookie(refreshToken, res);
 
-  return res.status(201).json(accessToken);
+  res.status(201).json(accessToken);
 });
 
 export const refreshToken = asyncHandler(
   async (req: Request, res: Response) => {
     const { jwt: refreshToken } = req?.cookies;
 
-    if (!refreshToken)
-      return res.status(401).json({ message: "Missing refresh token" });
+    if (!refreshToken) {
+      res.status(401).json({ message: "Missing refresh token" });
+      return;
+    }
 
     try {
       const decodedToken = jwt.verify(
@@ -143,10 +154,12 @@ export const refreshToken = asyncHandler(
         isCompanyAccount: 1,
       }).lean();
 
-      if (!user || user.email !== decodedToken.email) return res.status(401);
+      if (!user || user.email !== decodedToken.email) {
+        res.status(401).json({ message: "Invalid token" });
+        return;
+      }
 
-      let restaurantName;
-
+      let restaurantName: string | undefined;
       let imageUrl = user?.profileImg ?? undefined;
       let createdAt = user.createdAt;
 
@@ -188,7 +201,10 @@ export const refreshToken = asyncHandler(
 export const logout = (req: Request, res: Response) => {
   const { jwt } = req?.cookies;
 
-  if (!jwt) return res.status(404).json({ message: "Utente gia' sloggato" });
+  if (!jwt) {
+    res.status(404).json({ message: "Utente gia' sloggato" });
+    return;
+  }
 
   res.clearCookie("jwt", { httpOnly: true, secure: true });
 

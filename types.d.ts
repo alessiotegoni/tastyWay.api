@@ -143,7 +143,7 @@ export enum RestaurantType {
   TRENDING = "trending",
 }
 
-export type RestautantFilters = {
+export type RestaurantFilters = {
   name: string | null;
   foodType: FoodType[] | null;
   restaurantType: RestaurantType[] | null;

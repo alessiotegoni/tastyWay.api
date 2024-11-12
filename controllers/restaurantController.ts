@@ -1,14 +1,14 @@
 import asyncHandler from "express-async-handler";
 import { OrderSchema, RestaurantSchema, UserSchema } from "../models";
-import { v2 as cloudinary } from "cloudinary";
 import { calcExpectedTime, getItems, uploadImg } from "../lib/utils";
 import {
   DBOrderItem,
   RestaurantDocument,
+  RestaurantFilters,
   RestaurantItemsFilters,
   RestaurantOrder,
   RestaurantOrdersFilters,
-  RestautantFilters,
+  RestaurantType,
 } from "../types";
 import mongoose, { isValidObjectId } from "mongoose";
 
@@ -41,38 +41,107 @@ export const getRestaurants = asyncHandler(async (req, res) => {
 
   // Cursor method (performance)
 
-  const query: any = {
-    location: {
-      $near: {
-        $geometry: {
+  const restaurantFilters = filters as RestaurantFilters;
+
+  const baseQuery: any[] = [
+    {
+      $geoNear: {
+        near: {
           type: "Point",
           coordinates: req.coords,
         },
-        $maxDistance: 5000,
+        distanceField: "distance",
+        maxDistance: 5000,
+        spherical: true,
       },
     },
-  };
-
-  const restaurantFilters = filters as RestautantFilters;
-
-  if (pageParam) query._id = { $lt: pageParam };
+    {
+      $addFields: {
+        avgItemPrice: { $avg: "$items.price" },
+      },
+    },
+  ];
 
   if (restaurantFilters?.name) {
     const nameRegex = new RegExp(restaurantFilters.name, "i");
-    query.name = { $regex: nameRegex };
+    baseQuery.push({
+      $match: {
+        name: { $regex: nameRegex },
+      },
+    });
   }
-  if (restaurantFilters?.foodType?.length)
-    query.cuisine = { $in: restaurantFilters.foodType };
 
-  // TODO: restaurant type filters (calc required)
+  if (restaurantFilters?.foodType?.length) {
+    baseQuery.push({
+      $match: {
+        cuisine: { $in: restaurantFilters.foodType },
+      },
+    });
+  }
 
-  const restaurants = await RestaurantSchema.find(query, {
-    items: 0,
-    location: 0,
-    createdAt: 0,
-    updatedAt: 0,
-    ownerId: 0,
-  })
+  if (restaurantFilters?.restaurantType?.length) {
+    const typeFilters = restaurantFilters.restaurantType;
+
+    // const typeFiltersObj = {
+    //   "cheap": {
+    //     $match: {
+    //       avgItemPrice: { $lt: 10 },
+    //     },
+    //   }
+    // }
+
+    if (typeFilters.includes(RestaurantType.CHEAP)) {
+      baseQuery.push({
+        $match: {
+          avgItemPrice: { $lt: 10 },
+        },
+      });
+    }
+
+    if (typeFilters.includes(RestaurantType.EXPENSIVE)) {
+      baseQuery.push({
+        $match: {
+          avgItemPrice: { $gt: 20 },
+        },
+      });
+    }
+
+    if (typeFilters.includes(RestaurantType.FAST_DELIVERY)) {
+      baseQuery.push({
+        $match: {
+          "deliveryInfo.time": { $lt: 30 },
+        },
+      });
+    }
+
+    if (typeFilters.includes(RestaurantType.TRENDING)) {
+      baseQuery.push({
+        $match: {
+          popularityScore: { $gt: 80 },
+        },
+      });
+    }
+  }
+
+  if (pageParam) {
+    baseQuery.push({
+      $match: {
+        _id: { $lt: pageParam },
+      },
+    });
+  }
+
+  baseQuery.push({
+    $project: {
+      items: 0,
+      location: 0,
+      createdAt: 0,
+      updatedAt: 0,
+      ownerId: 0,
+    },
+  });
+
+  const restaurants = await RestaurantSchema.aggregate(baseQuery)
     .sort({ _id: -1 })
     .limit(Number(limit));
 
@@ -101,7 +170,7 @@ export const getRestaurantByName = asyncHandler(async (req, res) => {
     }
   ).lean();
 
-  return res.status(200).json(
+  res.status(200).json(
     restaurant
       ? {
           _id: restaurant._id,
@@ -122,30 +191,9 @@ export const getRestaurantByName = asyncHandler(async (req, res) => {
 
 export const getRestaurantItems = asyncHandler(async (req, res) => {
   const { restaurantId } = req.params;
-  const { pageParam, limit, filters } = req.query;
+  const { filters } = req.query;
 
   const itemsFilters = filters as RestaurantItemsFilters;
-
-  // let projection: any = {};
-
-  // if (itemsFilters?.name || itemsFilters?.itemsTypes?.length) {
-  //   projection.items = { $elemMatch: {} };
-  // }
-
-  // if (pageParam) projection.items.$elemMatch._id = { $lt: pageParam };
-
-  // if (itemsFilters?.name) {
-  //   const nameRegex = new RegExp(itemsFilters.name, "i");
-  //   projection.items.$elemMatch.name = { $regex: nameRegex };
-  // }
-
-  // if (itemsFilters?.itemsTypes?.length)
-  //   projection.items.$elemMatch.type = { $in: itemsFilters.itemsTypes };
-
-  // const restaurant = await RestaurantSchema.findById(
-  //   restaurantId,
-  //   projection
-  // ).limit(Number(limit));
 
   const itemConditions: any[] = [];
 
@@ -167,8 +215,6 @@ export const getRestaurantItems = asyncHandler(async (req, res) => {
     ? { $and: itemConditions }
     : true;
 
-  console.log(itemsFilters);
-
   const [restaurant] = await RestaurantSchema.aggregate<RestaurantDocument>([
     {
       $match: {
@@ -188,14 +234,7 @@ export const getRestaurantItems = asyncHandler(async (req, res) => {
     },
   ]);
 
-  console.log(restaurant);
-
-  const lastItem = restaurant?.items?.at(-1);
-
-  res.status(200).json({
-    restaurantItems: restaurant?.items ?? [],
-    nextCursor: lastItem ? lastItem._id : null,
-  });
+  res.status(200).json(restaurant.items ?? []);
 });
 
 export const getMyRestaurant = asyncHandler(async (req, res) => {
@@ -206,8 +245,10 @@ export const getMyRestaurant = asyncHandler(async (req, res) => {
     { ownerId: 0, createdAt: 0, updatedAt: 0, imageUrl: 0, location: 0, _id: 0 }
   ).lean();
 
-  if (!restaurant)
-    return res.status(404).json({ message: "Crea il tuo ristorante" });
+  if (!restaurant) {
+    res.status(404).json({ message: "Crea il tuo ristorante" });
+    return;
+  }
 
   res.status(200).json(restaurant);
 });
@@ -215,24 +256,28 @@ export const getMyRestaurant = asyncHandler(async (req, res) => {
 export const createRestaurant = asyncHandler(async (req, res) => {
   const { name, items } = req.body;
 
-  if (!req.files)
-    return res
+  if (!req.files) {
+    res
       .status(400)
       .json({ message: "Immagini del ristorante e dei piatti obbligatoria" });
+    return;
+  }
 
   const hasRestaurant = await RestaurantSchema.exists({
     ownerId: req.user!.id,
   }).lean();
 
-  if (hasRestaurant)
-    return res
-      .status(400)
-      .json({ message: "Sei gia' il titolare di un ristorante" });
+  if (hasRestaurant) {
+    res.status(400).json({ message: "Sei gia' il titolare di un ristorante" });
+    return;
+  }
 
   const nameExist = await RestaurantSchema.exists({ name }).lean();
 
-  if (nameExist)
-    return res.status(401).json({ message: "Questo ristorante esiste già" });
+  if (nameExist) {
+    res.status(401).json({ message: "Questo ristorante esiste già" });
+    return;
+  }
 
   const addressExist = await RestaurantSchema.exists({
     location: {
@@ -240,17 +285,20 @@ export const createRestaurant = asyncHandler(async (req, res) => {
     },
   }).lean();
 
-  if (addressExist)
-    return res.status(403).json({
+  if (addressExist) {
+    res.status(403).json({
       message: `Esiste gia' un ristorante in questo indirizzo`,
     });
+    return;
+  }
 
   const itemsImgs = req.files;
 
   if (!itemsImgs?.length) {
-    return res
+    res
       .status(400)
       .json({ message: "Immagini del ristorante e dei piatti obbligatoria" });
+    return;
   }
 
   const fullItems: Omit<DBOrderItem, "_id">[] = [];
@@ -275,10 +323,11 @@ export const createRestaurant = asyncHandler(async (req, res) => {
     const uploadedItems = await Promise.all(itemPromises);
     fullItems.push(...uploadedItems);
   } catch (err: any) {
-    return res.status(400).json({
+    res.status(400).json({
       message:
         err.message ?? "Errore nel caricamento delle immagini dei piatti",
     });
+    return;
   }
 
   await RestaurantSchema.create({
@@ -316,10 +365,12 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     },
   }).lean();
 
-  if (addressExist)
-    return res.status(403).json({
+  if (addressExist) {
+    res.status(403).json({
       message: `Esiste gia' un ristorante in questa via nella tua citta`,
     });
+    return;
+  }
 
   const updatedItems: DBOrderItem[] = [];
   try {
@@ -352,9 +403,10 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     const uploadedItems = await Promise.all(itemPromises);
     updatedItems.push(...uploadedItems);
   } catch (err: any) {
-    return res.status(400).json({
+    res.status(400).json({
       message: err.message,
     });
+    return;
   }
 
   const updatedRestaurant = await RestaurantSchema.findByIdAndUpdate(
@@ -370,10 +422,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     { returnDocument: "after", projection: { items: 1 } }
   ).lean();
 
-  if (!updatedRestaurant)
-    throw new Error("Errore nell'aggiornamento del ristorante");
-
-  return res.status(201).json({
+  res.status(201).json({
     message: "Ristorante aggiornato con successo!",
   });
 });
@@ -400,9 +449,10 @@ export const updateRestaurantImg = asyncHandler(async (req, res) => {
       restaurantImgUrl = imgUrl;
       await req.restaurant.updateOne({ imageUrl: restaurantImgUrl });
     } catch (error) {
-      return res.status(500).json({
+      res.status(500).json({
         message: "Errore nel caricamento dell'immagine del ristorante",
       });
+      return;
     }
   }
 
@@ -525,29 +575,31 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
 export const getRestaurantOrderById = asyncHandler(async (req, res) => {
   const { orderId } = req.params;
 
-  if (!orderId || !isValidObjectId(orderId))
-    return res
-      .status(400)
-      .json({ message: "Id dell'ordine non presente o invalido" });
+  if (!orderId || !isValidObjectId(orderId)) {
+    res.status(400).json({ message: "Id dell'ordine non presente o invalido" });
+    return;
+  }
 
   const customer = await UserSchema.findById(req.order!.customerId, {
     name: 1,
     surname: 1,
   }).lean();
 
-  if (!customer)
-    return res
+  if (!customer) {
+    res
       .status(404)
       .json({ message: `L'utente che ha creato l'ordine non esiste piu` });
+    return;
+  }
 
   const { id, address, status, totalPrice, createdAt } = req.order!;
 
   const restaurant = req.restaurant;
 
-  if (!restaurant)
-    return res
-      .status(404)
-      .json({ message: "Il tuo ristorante non esiste piu" });
+  if (!restaurant) {
+    res.status(404).json({ message: "Il tuo ristorante non esiste piu" });
+    return;
+  }
 
   const items = getItems(req.order!.items, restaurant.items, "FULL");
 
@@ -566,14 +618,21 @@ export const getRestaurantOrderById = asyncHandler(async (req, res) => {
     items,
   };
 
-  return res.status(200).json(fullInfo);
+  res.status(200).json(fullInfo);
 });
 
 export const updateOrder = asyncHandler(async (req, res) => {
-  if (!req.order) return res.status(404).json({ message: "order ID missing" });
+  if (!req.order) {
+    res.status(404).json({ message: "order ID missing" });
+    return;
+  }
+
   const { status } = req.body;
 
-  if (!status) return res.status(404).json({ message: "Order status missing" });
+  if (!status) {
+    res.status(404).json({ message: "Order status missing" });
+    return;
+  }
 
   await req.order.updateOne({ status });
 
@@ -581,7 +640,10 @@ export const updateOrder = asyncHandler(async (req, res) => {
 });
 
 export const deleteOrder = asyncHandler(async (req, res) => {
-  if (!req.order) return res.status(404).json({ message: "order ID missing" });
+  if (!req.order) {
+    res.status(404).json({ message: "order ID missing" });
+    return;
+  }
 
   await req.order.deleteOne();
 
