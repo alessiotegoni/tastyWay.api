@@ -1,3 +1,4 @@
-import mongoose from 'mongoose'
+import mongoose from "mongoose";
 
-export const connectDB = async () => mongoose.connect(process.env.MONGODB_CONNECTION_STRING as string)
+export const connectDB = async () =>
+  mongoose.connect(process.env.MONGODB_CONNECTION_STRING!);

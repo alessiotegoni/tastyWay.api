@@ -3,7 +3,7 @@ import { RestaurantSchema } from "../../models";
 import { RestaurantDocument } from "../../types";
 
 export const checkOwner = asyncHandler(async (req, res, next) => {
-  const { id: userId } = req.user!;
+  const { id: userId, isCmpAccount } = req.user!;
 
   const restaurant = await RestaurantSchema.findOne<RestaurantDocument>(
     { ownerId: userId },
@@ -11,9 +11,10 @@ export const checkOwner = asyncHandler(async (req, res, next) => {
   );
 
   if (!restaurant) {
-    return res
+    res
       .status(401)
       .json({ message: "Non sei il titolare di nessun ristorante" });
+    return;
   }
 
   req.restaurant = restaurant;

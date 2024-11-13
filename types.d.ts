@@ -146,7 +146,7 @@ export enum RestaurantType {
 export type RestaurantFilters = {
   name: string | null;
   foodType: FoodType[] | null;
-  restaurantType: RestaurantType[] | null;
+  restaurantType: `${RestaurantType}`[] | null; // tranforma gli enum in union type di stringhe
 };
 
 export enum RestaurantItemsTypes {

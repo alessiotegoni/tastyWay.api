@@ -8,7 +8,6 @@ import {
   RestaurantItemsFilters,
   RestaurantOrder,
   RestaurantOrdersFilters,
-  RestaurantType,
 } from "../types";
 import mongoose, { isValidObjectId } from "mongoose";
 
@@ -90,31 +89,25 @@ export const getRestaurants = asyncHandler(async (req, res) => {
     //   }
     // }
 
-    if (typeFilters.includes(RestaurantType.CHEAP)) {
+    console.log(typeFilters);
+
+    if (typeFilters.includes("cheap") || typeFilters.includes("expensive")) {
       baseQuery.push({
-        $match: {
-          avgItemPrice: { $lt: 10 },
+        $sort: {
+          avgItemPrice: typeFilters.includes("cheap") ? 1 : -1,
         },
       });
     }
 
-    if (typeFilters.includes(RestaurantType.EXPENSIVE)) {
+    if (typeFilters.includes("fast_delivery")) {
       baseQuery.push({
-        $match: {
-          avgItemPrice: { $gt: 20 },
+        $sort: {
+          "deliveryInfo.time": 1,
         },
       });
     }
 
-    if (typeFilters.includes(RestaurantType.FAST_DELIVERY)) {
-      baseQuery.push({
-        $match: {
-          "deliveryInfo.time": { $lt: 30 },
-        },
-      });
-    }
-
-    if (typeFilters.includes(RestaurantType.TRENDING)) {
+    if (typeFilters.includes("top_rated")) {
       baseQuery.push({
         $match: {
           popularityScore: { $gt: 80 },
@@ -142,7 +135,6 @@ export const getRestaurants = asyncHandler(async (req, res) => {
   });
 
   const restaurants = await RestaurantSchema.aggregate(baseQuery)
-    .sort({ _id: -1 })
     .limit(Number(limit));
 
   const lastRestaurant = restaurants.at(-1);
