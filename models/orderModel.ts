@@ -3,19 +3,19 @@ import { model, Schema } from "mongoose";
 const OrderSchema = new Schema(
   {
     customerId: {
-      type: String,
+      type: Schema.Types.ObjectId,
       ref: "users",
       required: true,
       trim: true,
     },
     restaurantId: {
-      type: String,
+      type: Schema.Types.ObjectId,
       ref: "restaurants",
       required: true,
       trim: true,
     },
     status: {
-      type: String, 
+      type: String,
       enum: [
         "In attesa",
         "Accettato",

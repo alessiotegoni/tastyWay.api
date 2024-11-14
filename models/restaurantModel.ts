@@ -4,7 +4,7 @@ import { MenuItemSchema } from "./menuItemModel";
 const restaurantModel = new Schema(
   {
     ownerId: {
-      type: String,
+      type: Schema.Types.ObjectId,
       ref: "users",
       required: true,
       trim: true,

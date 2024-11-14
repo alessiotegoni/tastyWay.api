@@ -8,6 +8,7 @@ import {
   RestaurantItemsFilters,
   RestaurantOrder,
   RestaurantOrdersFilters,
+  RestaurantType,
 } from "../types";
 import mongoose, { isValidObjectId } from "mongoose";
 
@@ -42,12 +43,12 @@ export const getRestaurants = asyncHandler(async (req, res) => {
 
   const restaurantFilters = filters as RestaurantFilters;
 
-  const baseQuery: any[] = [
+  const baseQuery: mongoose.PipelineStage[] = [
     {
       $geoNear: {
         near: {
           type: "Point",
-          coordinates: req.coords,
+          coordinates: req.coords!,
         },
         distanceField: "distance",
         maxDistance: 5000,
@@ -55,9 +56,7 @@ export const getRestaurants = asyncHandler(async (req, res) => {
       },
     },
     {
-      $addFields: {
-        avgItemPrice: { $avg: "$items.price" },
-      },
+      $sort: { _id: -1 },
     },
   ];
 
@@ -78,64 +77,84 @@ export const getRestaurants = asyncHandler(async (req, res) => {
     });
   }
 
-  if (restaurantFilters?.restaurantType?.length) {
-    const typeFilters = restaurantFilters.restaurantType;
+  const typeFilter = restaurantFilters?.restaurantType?.at(0);
+  if (typeFilter) {
+    const avgItemPriceField = {
+      $addFields: {
+        avgItemPrice: { $avg: "$items.price" },
+      },
+    };
 
-    // const typeFiltersObj = {
-    //   "cheap": {
-    //     $match: {
-    //       avgItemPrice: { $lt: 10 },
-    //     },
-    //   }
-    // }
-
-    console.log(typeFilters);
-
-    if (typeFilters.includes("cheap") || typeFilters.includes("expensive")) {
-      baseQuery.push({
-        $sort: {
-          avgItemPrice: typeFilters.includes("cheap") ? 1 : -1,
+    const typeFiltersObj: { [key: string]: mongoose.PipelineStage[] } = {
+      cheap: [
+        avgItemPriceField,
+        {
+          $sort: {
+            avgItemPrice: 1,
+          },
         },
-      });
-    }
-
-    if (typeFilters.includes("fast_delivery")) {
-      baseQuery.push({
-        $sort: {
-          "deliveryInfo.time": 1,
+      ],
+      expensive: [
+        avgItemPriceField,
+        {
+          $sort: {
+            avgItemPrice: -1,
+          },
         },
-      });
-    }
-
-    if (typeFilters.includes("top_rated")) {
-      baseQuery.push({
-        $match: {
-          popularityScore: { $gt: 80 },
+      ],
+      fast_delivery: [
+        {
+          $sort: {
+            "deliveryInfo.time": 1,
+          },
         },
-      });
-    }
+      ],
+      // $lookup permette di unire i dati dai documenti di altre collection
+      // alla collection della query
+      trending: [
+        {
+          $lookup: {
+            from: "orders", // nome della collezione ordini
+            localField: "_id", // campo del ristorante da usare per la join
+            foreignField: "restaurantId", // campo nella collezione ordini che corrisponde a `localField`
+            as: "orders", // nome dell'array risultato della join
+          },
+        },
+        {
+          $addFields: {
+            orderCount: { $size: "$orders" },
+          },
+        },
+        {
+          $sort: { orderCount: -1 },
+        },
+      ],
+    };
+
+    baseQuery.push(...typeFiltersObj[typeFilter]);
   }
 
   if (pageParam) {
     baseQuery.push({
       $match: {
-        _id: { $lt: pageParam },
+        _id: { $lt: new mongoose.Types.ObjectId(pageParam as string) },
       },
     });
   }
 
   baseQuery.push({
     $project: {
-      items: 0,
-      location: 0,
-      createdAt: 0,
-      updatedAt: 0,
-      ownerId: 0,
+      name: 1,
+      imageUrl: 1,
+      address: 1,
+      deliveryInfo: 1,
+      cuisine: 1,
     },
   });
 
-  const restaurants = await RestaurantSchema.aggregate(baseQuery)
-    .limit(Number(limit));
+  const restaurants = await RestaurantSchema.aggregate(baseQuery).limit(
+    Number(limit)
+  );
 
   const lastRestaurant = restaurants.at(-1);
 
