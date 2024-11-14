@@ -12,17 +12,17 @@ const restaurantModel = new Schema(
     },
     name: {
       type: String,
-      required: true,
       unique: true,
+      default: "",
     },
     imageUrl: {
       type: String,
-      default: null,
+      default: "",
     },
     address: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
     },
     location: {
       type: {

@@ -44,7 +44,7 @@ router.use(verifyJWT, checkCmpAccount);
 router
   .route("/my/restaurant")
   .get(getMyRestaurant)
-  .post(imgsUploader, validateRestaurantBody, verifyAddress, createRestaurant)
+  .post(createRestaurant)
   .patch(
     checkOwner,
     imgsUploader,

@@ -58,6 +58,19 @@ export const getRestaurants = asyncHandler(async (req, res) => {
     {
       $sort: { _id: -1 },
     },
+    {
+      $match: {
+        "deliveryInfo.time": { $gt: 0 },
+        $expr: {
+          $and: [
+            { $gt: [{ $strLenCP: "$name" }, 3] },
+            { $gt: [{ $strLenCP: "$imageUrl" }, 0] },
+            { $gt: [{ $size: "$cuisine" }, 0] },
+            { $gt: [{ $size: "$items" }, 1] },
+          ],
+        },
+      },
+    },
   ];
 
   if (restaurantFilters?.name) {
@@ -265,94 +278,29 @@ export const getMyRestaurant = asyncHandler(async (req, res) => {
 });
 
 export const createRestaurant = asyncHandler(async (req, res) => {
-  const { name, items } = req.body;
-
-  if (!req.files) {
-    res
-      .status(400)
-      .json({ message: "Immagini del ristorante e dei piatti obbligatoria" });
-    return;
-  }
-
-  const hasRestaurant = await RestaurantSchema.exists({
-    ownerId: req.user!.id,
-  }).lean();
+  const hasRestaurant = await RestaurantSchema.exists({ _id: req.user!.id });
 
   if (hasRestaurant) {
-    res.status(400).json({ message: "Sei gia' il titolare di un ristorante" });
-    return;
-  }
-
-  const nameExist = await RestaurantSchema.exists({ name }).lean();
-
-  if (nameExist) {
-    res.status(401).json({ message: "Questo ristorante esiste già" });
-    return;
-  }
-
-  const addressExist = await RestaurantSchema.exists({
-    location: {
-      coords: req.coords,
-    },
-  }).lean();
-
-  if (addressExist) {
-    res.status(403).json({
-      message: `Esiste gia' un ristorante in questo indirizzo`,
-    });
-    return;
-  }
-
-  const itemsImgs = req.files;
-
-  if (!itemsImgs?.length) {
-    res
-      .status(400)
-      .json({ message: "Immagini del ristorante e dei piatti obbligatoria" });
-    return;
-  }
-
-  const fullItems: Omit<DBOrderItem, "_id">[] = [];
-
-  try {
-    const itemPromises = items.map(
-      async (item: Omit<DBOrderItem, "_id">, index: number) => {
-        const itemImg = req.files!.find(
-          (file) => file.fieldname === `items[${index}][img]`
-        );
-
-        if (!itemImg) {
-          throw new Error("Tutti gli item devono avere un'immagine");
-        }
-
-        const itemImgUrl = await uploadImg(itemImg);
-
-        return { ...item, img: itemImgUrl };
-      }
-    );
-
-    const uploadedItems = await Promise.all(itemPromises);
-    fullItems.push(...uploadedItems);
-  } catch (err: any) {
-    res.status(400).json({
-      message:
-        err.message ?? "Errore nel caricamento delle immagini dei piatti",
-    });
+    res.status(401).json({ message: "Hai gia un ristorante" });
     return;
   }
 
   await RestaurantSchema.create({
-    ...req.body,
+    ownerId: req.user!.id,
     location: {
       type: "Point",
-      coordinates: req.coords,
+      coordinates: [0, 0],
     },
-    ownerId: req.user!.id,
-    items: fullItems,
+    deliveryInfo: {
+      price: 0,
+      time: 0,
+    },
+    cuisine: [],
+    items: [],
   });
 
   res.status(201).json({
-    message: "Ristorante creato con successo!",
+    message: "Impossibile passare ad account aziendale, riprova piu tardi",
   });
 });
 
@@ -390,9 +338,8 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
         (file) => file.fieldname === `items[${index}][img]`
       );
 
-      if (!itemImg && !item.img) {
+      if (!itemImg && !item.img)
         throw new Error("Tutti gli item devono avere un'immagine");
-      }
 
       if (!itemImg) return item;
 
@@ -408,7 +355,10 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
         },
       });
 
-      return { ...item, img: itemImgUrl };
+      return {
+        ...item,
+        img: itemImgUrl,
+      };
     });
 
     const uploadedItems = await Promise.all(itemPromises);
@@ -420,18 +370,14 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     return;
   }
 
-  const updatedRestaurant = await RestaurantSchema.findByIdAndUpdate(
-    req.restaurant.id,
-    {
-      ...req.body,
-      items: updatedItems,
-      location: {
-        type: "Point",
-        coordinates: req.coords,
-      },
+  await RestaurantSchema.findByIdAndUpdate(req.restaurant.id, {
+    ...req.body,
+    items: updatedItems,
+    location: {
+      type: "Point",
+      coordinates: req.coords,
     },
-    { returnDocument: "after", projection: { items: 1 } }
-  ).lean();
+  }).lean();
 
   res.status(201).json({
     message: "Ristorante aggiornato con successo!",

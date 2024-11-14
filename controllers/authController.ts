@@ -152,6 +152,7 @@ export const refreshToken = asyncHandler(
         surname: 1,
         address: 1,
         isCompanyAccount: 1,
+        createdAt: 1,
       }).lean();
 
       if (!user || user.email !== decodedToken.email) {
