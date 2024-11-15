@@ -2,6 +2,32 @@ import { body, query } from "express-validator";
 import { valErrsHandler } from "./errsHandler";
 import { isValidObjectId } from "mongoose";
 
+export const validateGoogleAuth = [
+  body("name")
+    .optional()
+    .isString()
+    .withMessage(`Il nome dell'utente deve essere una stringa`),
+
+  body("surname")
+    .optional()
+    .isString()
+    .withMessage(`Il cognome dell'utente deve essere una stringa`),
+
+  body("email").optional().isEmail().withMessage("Email non valida"),
+
+  body("profileImg")
+    .optional()
+    .isURL()
+    .withMessage("Url dell'immagine utente invalido"),
+
+  body("access_token")
+    .optional()
+    .isString()
+    .withMessage("Access token invalido"),
+
+  valErrsHandler,
+];
+
 export const validateSignInBody = [
   body("email").isEmail().withMessage("Email non valida"),
 

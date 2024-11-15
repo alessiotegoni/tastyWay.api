@@ -367,6 +367,11 @@ export const updateUserSecurity = asyncHandler(async (req, res) => {
 
   const user = await UserSchema.findOne({ _id: req.user!.id }, { password: 1 });
 
+  if (!user?.password) {
+    res.status(404).json({ message: "Non hai ancora creato una password" });
+    return;
+  }
+
   const passwordsMatch = await bcrypt.compare(oldPassword, user!.password);
 
   if (!passwordsMatch) {

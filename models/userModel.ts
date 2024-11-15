@@ -14,16 +14,13 @@ const UserSchema = new Schema(
     },
     profileImg: {
       type: String,
-      required: false,
     },
     address: {
       type: String,
-      required: true,
-      trim: true
+      trim: true,
     },
     phoneNumber: {
       type: Number,
-      required: true,
       trim: true,
       unique: true,
     },
@@ -35,7 +32,6 @@ const UserSchema = new Schema(
     },
     password: {
       type: String,
-      required: true,
       minlength: 6,
     },
     isCompanyAccount: {

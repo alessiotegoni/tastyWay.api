@@ -24,6 +24,23 @@ export type UserAccessToken = {
   createdAt: NativeDate;
 };
 
+export interface GoogleUserData {
+  aud: string;
+  azp: string;
+  email: string;
+  email_verified: boolean;
+  exp: number;
+  family_name: string;
+  given_name: string;
+  iat: number;
+  iss: string;
+  jti: string;
+  name: string;
+  nbf: number;
+  picture: string;
+  sub: string;
+}
+
 export type UserRefreshToken = {
   id: string;
   email: string;

@@ -4,7 +4,95 @@ import bcrypt from "bcrypt";
 import { RestaurantSchema, UserSchema } from "../models";
 import { setJwtCookie, signJwt } from "../lib/utils";
 import jwt from "jsonwebtoken";
-import { UserRefreshToken } from "../types";
+import { GoogleUserData, UserRefreshToken } from "../types";
+import axios from "axios";
+
+export const googleAuth = asyncHandler(async (req, res) => {
+  const googleAccessToken = req.body?.access_token;
+
+  let userData: Partial<GoogleUserData> | undefined = req.body?.userData;
+
+  if (!userData && !googleAccessToken) {
+    res
+      .status(404)
+      .json({ message: "google user data or access_token missing" });
+    return;
+  }
+
+  if (!userData && googleAccessToken) {
+    userData = (
+      await axios.get<GoogleUserData>(
+        `https://www.googleapis.com/oauth2/v3/userinfo`,
+        {
+          headers: { Authorization: `Bearer ${googleAccessToken}` },
+        }
+      )
+    ).data;
+  }
+
+  if (!userData?.email || !userData?.given_name || !userData?.family_name) {
+    res.status(404).json({ message: "Il tuo account google non e' valido" });
+    return;
+  }
+
+  const { email, given_name, family_name, picture } = userData;
+
+  let user = await UserSchema.findOne({ email }).lean();
+
+  if (!user) {
+    user = await UserSchema.create({
+      email,
+      name: given_name,
+      surname: family_name,
+      profileImg: picture,
+    });
+  }
+
+  let restaurantName: string | undefined;
+  let imageUrl = user?.profileImg ?? undefined;
+  let createdAt = user.createdAt;
+
+  if (user.isCompanyAccount) {
+    const userRestaurant = await RestaurantSchema.findOne(
+      { ownerId: user._id },
+      { name: 1, imageUrl: 1, createdAt: 1 }
+    ).lean();
+
+    if (userRestaurant) {
+      restaurantName = userRestaurant.name;
+      imageUrl = userRestaurant.imageUrl;
+      createdAt = userRestaurant.createdAt;
+    }
+  }
+
+  const accessToken = signJwt(
+    {
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      surname: user.surname,
+      address: user.address ?? "",
+      imageUrl,
+      restaurantName,
+      isCmpAccount: user.isCompanyAccount,
+      createdAt,
+    },
+    "1d"
+  );
+
+  const refreshToken = signJwt(
+    { id: user._id.toString(), email: user.email },
+    "17d"
+  );
+
+  if (!accessToken || !refreshToken) {
+    throw Error("Error while generating jwt token");
+  }
+
+  setJwtCookie(refreshToken, res);
+
+  res.status(201).json(accessToken);
+});
 
 export const signIn = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -21,6 +109,14 @@ export const signIn = asyncHandler(async (req, res) => {
     return;
   }
 
+  if (!user.password) {
+    res.status(404).json({
+      message:
+        "Logga col tuo account google e crea una password sulla sezione sicurezza del tuo profilo",
+    });
+    return;
+  }
+
   const passwordMatchs = await bcrypt.compare(password, user.password);
 
   if (!passwordMatchs) {
@@ -28,7 +124,7 @@ export const signIn = asyncHandler(async (req, res) => {
     return;
   }
 
-  let restaurantName;
+  let restaurantName: string | undefined;
   let imageUrl = user?.profileImg ?? undefined;
   let createdAt = user.createdAt;
 
@@ -54,7 +150,7 @@ export const signIn = asyncHandler(async (req, res) => {
       createdAt,
       name: user.name,
       surname: user.surname,
-      address: user.address,
+      address: user.address ?? "",
       isCmpAccount: user.isCompanyAccount,
     },
     "1d"
@@ -114,7 +210,7 @@ export const signUp = asyncHandler(async (req, res) => {
       createdAt: user.createdAt,
       name: user.name,
       surname: user.surname,
-      address: user.address,
+      address: user.address ?? "",
       isCmpAccount: user.isCompanyAccount,
     },
     "1d"
@@ -186,7 +282,7 @@ export const refreshToken = asyncHandler(
           createdAt,
           name: user.name,
           surname: user.surname,
-          address: user.address,
+          address: user.address ?? "",
           isCmpAccount: user.isCompanyAccount,
         },
         "1d"
