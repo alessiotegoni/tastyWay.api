@@ -365,25 +365,27 @@ export const updateUserInfo = asyncHandler(async (req, res) => {
 export const updateUserSecurity = asyncHandler(async (req, res) => {
   const { newPassword, oldPassword } = req.body;
 
-  const user = await UserSchema.findOne({ _id: req.user!.id }, { password: 1 });
+  const user = await UserSchema.findById(req.user!.id, { password: 1 });
 
-  if (!user?.password) {
-    res.status(404).json({ message: "Non hai ancora creato una password" });
+  if (user?.password && !oldPassword) {
+    res.status(404).json({ message: "OldPassword field required" });
     return;
   }
 
-  const passwordsMatch = await bcrypt.compare(oldPassword, user!.password);
+  if (user?.password && oldPassword) {
+    const passwordsMatch = await bcrypt.compare(oldPassword, user.password);
 
-  if (!passwordsMatch) {
-    res.status(401).json({ message: "Le password non corrispondono" });
-    return;
+    if (!passwordsMatch) {
+      res.status(401).json({ message: "Le password non corrispondono" });
+      return;
+    }
   }
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
   await user!.updateOne({ password: hashedPassword }).lean();
 
-  res.status(200).json({ message: "Password cambiata con successo!" });
+  res.status(200).json({ message: "Password aggiornata con successo" });
 });
 
 export const updateUserImg = asyncHandler(async (req, res) => {

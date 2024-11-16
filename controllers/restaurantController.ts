@@ -8,7 +8,6 @@ import {
   RestaurantItemsFilters,
   RestaurantOrder,
   RestaurantOrdersFilters,
-  RestaurantType,
 } from "../types";
 import mongoose, { isValidObjectId } from "mongoose";
 
@@ -331,6 +330,11 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     return;
   }
 
+  if (!req.restaurant.imageUrl) {
+    res.status(404).json({ message: "Immagine del ristorante obbligatoria" });
+    return;
+  }
+
   const updatedItems: DBOrderItem[] = [];
   try {
     const itemPromises = items.map(async (item: DBOrderItem, index: number) => {
@@ -370,14 +374,16 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     return;
   }
 
-  await RestaurantSchema.findByIdAndUpdate(req.restaurant.id, {
-    ...req.body,
-    items: updatedItems,
-    location: {
-      type: "Point",
-      coordinates: req.coords,
-    },
-  }).lean();
+  await req.restaurant
+    .updateOne({
+      ...req.body,
+      items: updatedItems,
+      location: {
+        type: "Point",
+        coordinates: req.coords,
+      },
+    })
+    .lean();
 
   res.status(201).json({
     message: "Ristorante aggiornato con successo!",

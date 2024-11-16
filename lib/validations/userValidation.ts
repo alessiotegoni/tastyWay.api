@@ -107,9 +107,13 @@ export const validateUserInfoBody = [
 export const validateUserSecurityBody = [
   body("newPassword")
     .isString()
-    .withMessage(`La nuova password deve essere una stringa`),
+    .isLength({ min: 8 })
+    .withMessage(
+      `La nuova password deve essere una stringa di minimo 8 caratteri`
+    ),
 
   body("oldPassword")
+    .optional()
     .isString()
     .withMessage(`La vecchia password deve essere una stringa`),
 

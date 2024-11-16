@@ -35,6 +35,8 @@ export const googleAuth = asyncHandler(async (req, res) => {
     return;
   }
 
+  console.log(userData);
+
   const { email, given_name, family_name, picture } = userData;
 
   let user = await UserSchema.findOne({ email }).lean();
@@ -74,6 +76,7 @@ export const googleAuth = asyncHandler(async (req, res) => {
       address: user.address ?? "",
       imageUrl,
       restaurantName,
+      isGoogleLogged: true,
       isCmpAccount: user.isCompanyAccount,
       createdAt,
     },
@@ -150,6 +153,7 @@ export const signIn = asyncHandler(async (req, res) => {
       createdAt,
       name: user.name,
       surname: user.surname,
+      isGoogleLogged: !user?.password,
       address: user.address ?? "",
       isCmpAccount: user.isCompanyAccount,
     },
@@ -210,8 +214,9 @@ export const signUp = asyncHandler(async (req, res) => {
       createdAt: user.createdAt,
       name: user.name,
       surname: user.surname,
-      address: user.address ?? "",
-      isCmpAccount: user.isCompanyAccount,
+      address: user.address!,
+      isGoogleLogged: false,
+      isCmpAccount: false,
     },
     "1d"
   );
@@ -241,15 +246,7 @@ export const refreshToken = asyncHandler(
         process.env.JWT_TOKEN_SECRET as string
       ) as UserRefreshToken;
 
-      const user = await UserSchema.findById(decodedToken?.id, {
-        _id: 1,
-        email: 1,
-        name: 1,
-        surname: 1,
-        address: 1,
-        isCompanyAccount: 1,
-        createdAt: 1,
-      }).lean();
+      const user = await UserSchema.findById(decodedToken?.id).lean();
 
       if (!user || user.email !== decodedToken.email) {
         res.status(401).json({ message: "Invalid token" });
@@ -283,6 +280,7 @@ export const refreshToken = asyncHandler(
           name: user.name,
           surname: user.surname,
           address: user.address ?? "",
+          isGoogleLogged: !user?.password,
           isCmpAccount: user.isCompanyAccount,
         },
         "1d"

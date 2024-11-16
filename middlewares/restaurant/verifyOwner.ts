@@ -3,7 +3,7 @@ import { RestaurantSchema } from "../../models";
 import { RestaurantDocument } from "../../types";
 
 export const checkOwner = asyncHandler(async (req, res, next) => {
-  const { id: userId, isCmpAccount } = req.user!;
+  const { id: userId } = req.user!;
 
   const restaurant = await RestaurantSchema.findOne<RestaurantDocument>(
     { ownerId: userId },
