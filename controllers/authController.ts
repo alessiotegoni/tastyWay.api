@@ -35,8 +35,6 @@ export const googleAuth = asyncHandler(async (req, res) => {
     return;
   }
 
-  console.log(userData);
-
   const { email, given_name, family_name, picture } = userData;
 
   let user = await UserSchema.findOne({ email }).lean();

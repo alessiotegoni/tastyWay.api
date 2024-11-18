@@ -256,7 +256,9 @@ export const createCheckoutSession = asyncHandler(async (req, res) => {
   });
 
   if (!session) {
-    res.status(404).json({ message: "Errore nella creazione della sessione" });
+    res
+      .status(404)
+      .json({ message: "Errore nella creazione della sessione di pagamento" });
     return;
   }
 
@@ -308,12 +310,11 @@ export const getUserProfile = asyncHandler(async (req, res) => {
   const { id: userId } = req.user!;
 
   const user = await UserSchema.findById(userId, {
-    password: 0,
-    _id: 0,
-    updatedAt: 0,
-    createdAt: 0,
-    profileImg: 0,
-    __v: 0,
+    name: 1,
+    surname: 1,
+    isCompanyAccount: 1,
+    address: 1,
+    phoneNumber: 1,
   }).lean();
 
   if (!user) {
@@ -321,7 +322,11 @@ export const getUserProfile = asyncHandler(async (req, res) => {
     return;
   }
 
-  res.status(200).json(user);
+  res.status(200).json({
+    ...user,
+    address: user.address ?? "",
+    phoneNumber: user.phoneNumber ?? 0,
+  });
 });
 
 export const updateUserInfo = asyncHandler(async (req, res) => {
@@ -333,14 +338,9 @@ export const updateUserInfo = asyncHandler(async (req, res) => {
     phoneNumber: 1,
   });
 
-  if (!user) {
-    res.status(500);
-    return;
-  }
-
   const numberExist = await UserSchema.exists({
     phoneNumber,
-    _id: { $ne: user._id },
+    _id: { $ne: user!._id },
   }).lean();
 
   if (numberExist) {
@@ -350,14 +350,14 @@ export const updateUserInfo = asyncHandler(async (req, res) => {
     return;
   }
 
-  if (user.isCompanyAccount && !isCompanyAccount) {
+  if (user!.isCompanyAccount && !isCompanyAccount) {
     res.status(400).json({
       message: "Non puoi passare da account aziendale a account utente",
     });
     return;
   }
 
-  await user.updateOne({ ...req.body }).lean();
+  await user!.updateOne({ ...req.body }).lean();
 
   res.status(200).json({ message: "Utente modificato con successo" });
 });

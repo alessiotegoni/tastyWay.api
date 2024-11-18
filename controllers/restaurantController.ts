@@ -277,10 +277,19 @@ export const getMyRestaurant = asyncHandler(async (req, res) => {
 });
 
 export const createRestaurant = asyncHandler(async (req, res) => {
-  const hasRestaurant = await RestaurantSchema.exists({ _id: req.user!.id });
+  const { id: _id, address } = req.user!;
+
+  const hasRestaurant = await RestaurantSchema.exists({ _id });
 
   if (hasRestaurant) {
     res.status(401).json({ message: "Hai gia un ristorante" });
+    return;
+  }
+
+  if (!address) {
+    res.status(404).json({
+      message: "Prima di creare il ristorante devi aggiornare il tuo indirizzo",
+    });
     return;
   }
 
@@ -299,7 +308,7 @@ export const createRestaurant = asyncHandler(async (req, res) => {
   });
 
   res.status(201).json({
-    message: "Impossibile passare ad account aziendale, riprova piu tardi",
+    message: "Ristorante creato con successo",
   });
 });
 
@@ -342,6 +351,11 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
         (file) => file.fieldname === `items[${index}][img]`
       );
 
+      item.name = `${item.name[0].toUpperCase()}${item.name.slice(1)}`;
+      item.description = `${item.description[0].toUpperCase()}${item.description.slice(
+        1
+      )}`;
+
       if (!itemImg && !item.img)
         throw new Error("Tutti gli item devono avere un'immagine");
 
@@ -362,7 +376,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       return {
         ...item,
         img: itemImgUrl,
-      };
+      };``
     });
 
     const uploadedItems = await Promise.all(itemPromises);
