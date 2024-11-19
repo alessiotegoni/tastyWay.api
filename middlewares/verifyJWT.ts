@@ -18,7 +18,7 @@ export const verifyJWT = asyncHandler(
     const token = authHeader.split(" ").at(1);
 
     if (!token) {
-      res.status(401).json({ message: "missing token" });
+      res.status(401).json({ message: "missing auth token" });
       return;
     }
 
@@ -28,14 +28,17 @@ export const verifyJWT = asyncHandler(
         process.env.JWT_TOKEN_SECRET!
       ) as UserAccessToken;
 
-      const user = await UserSchema.findById(decodedToken?.id, { email: 1 });
+      const user = await UserSchema.findById(decodedToken?.id, {
+        email: 1,
+        emailVerified: 1,
+      }).lean();
 
       if (!user || user.email !== decodedToken.email) {
         res.status(401).json({ message: "Utente non esistente" });
         return;
       }
 
-      req.user = decodedToken;
+      req.user = { ...decodedToken, emailVerified: user.emailVerified };
 
       next();
     } catch (err) {

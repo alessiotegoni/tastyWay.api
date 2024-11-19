@@ -1,11 +1,17 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import bcrypt from "bcrypt";
-import { RestaurantSchema, UserSchema } from "../models";
+import crypto from "crypto";
+import { AuthSchema, RestaurantSchema, UserSchema } from "../models";
 import { setJwtCookie, signJwt } from "../lib/utils";
 import jwt from "jsonwebtoken";
 import { GoogleUserData, UserRefreshToken } from "../types";
 import axios from "axios";
+import {
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+  sendWelcomeEmail,
+} from "../lib/mailtrap/mailFns";
 
 export const googleAuth = asyncHandler(async (req, res) => {
   const googleAccessToken = req.body?.access_token;
@@ -45,6 +51,7 @@ export const googleAuth = asyncHandler(async (req, res) => {
       name: given_name,
       surname: family_name,
       profileImg: picture,
+      emailVerified: true,
     });
   }
 
@@ -76,6 +83,7 @@ export const googleAuth = asyncHandler(async (req, res) => {
       restaurantName,
       isGoogleLogged: true,
       isCmpAccount: user.isCompanyAccount,
+      emailVerified: user.emailVerified,
       createdAt,
     },
     "1d"
@@ -153,6 +161,7 @@ export const signIn = asyncHandler(async (req, res) => {
       surname: user.surname,
       isGoogleLogged: !user?.password,
       address: user.address ?? "",
+      emailVerified: user.emailVerified,
       isCmpAccount: user.isCompanyAccount,
     },
     "1d"
@@ -176,7 +185,7 @@ export const signUp = asyncHandler(async (req, res) => {
   const { phoneNumber, email: userEmail, password } = req.body;
 
   const emailExist = await UserSchema.exists({
-    email: { $regex: new RegExp(`^${userEmail.toLowerCase()}$`, "i") },
+    email: { $regex: new RegExp(userEmail, "i") },
   }).lean();
 
   if (emailExist) {
@@ -196,14 +205,36 @@ export const signUp = asyncHandler(async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const { isCompanyAccount, ...restBody } = req.body;
+  const emailVerificationToken = Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
+
+  const emailRes = await sendVerificationEmail(
+    req.body.email,
+    req.body.name,
+    emailVerificationToken
+  );
+
+  if (!emailRes.success) {
+    res
+      .status(400)
+      .json({ message: "Errore nell'invio dell'email di verifica" });
+    return;
+  }
 
   const user = await UserSchema.create({
-    ...restBody,
+    ...req.body,
     password: hashedPassword,
+    isCompanyAccount: false,
   });
 
-  const { id, email } = user;
+  await AuthSchema.create({
+    userId: user._id,
+    emailVerification: {
+      token: emailVerificationToken,
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+    },
+  });
 
   const accessToken = signJwt(
     {
@@ -215,10 +246,14 @@ export const signUp = asyncHandler(async (req, res) => {
       address: user.address!,
       isGoogleLogged: false,
       isCmpAccount: false,
+      emailVerified: false,
     },
     "1d"
   );
-  const refreshToken = signJwt({ id, email }, "30d");
+  const refreshToken = signJwt(
+    { id: user._id.toString(), email: user.email },
+    "30d"
+  );
 
   if (!accessToken || !refreshToken) {
     throw Error("Error while generating jwt token");
@@ -244,7 +279,7 @@ export const refreshToken = asyncHandler(
         process.env.JWT_TOKEN_SECRET as string
       ) as UserRefreshToken;
 
-      const user = await UserSchema.findById(decodedToken?.id).lean();
+      const user = await UserSchema.findById(decodedToken?.id);
 
       if (!user || user.email !== decodedToken.email) {
         res.status(401).json({ message: "Invalid token" });
@@ -278,6 +313,7 @@ export const refreshToken = asyncHandler(
           name: user.name,
           surname: user.surname,
           address: user.address ?? "",
+          emailVerified: user.emailVerified,
           isGoogleLogged: !user?.password,
           isCmpAccount: user.isCompanyAccount,
         },
@@ -303,3 +339,74 @@ export const logout = (req: Request, res: Response) => {
 
   res.status(200).json({ message: "Sloggato con successo" });
 };
+
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+
+  if (req.user!.emailVerified) {
+    res.status(400).json({ message: "Hai gia verificato l'email" });
+    return;
+  }
+
+  if (!token) {
+    res.status(404).json({ message: "Missing token" });
+    return;
+  }
+
+  const userAuth = await AuthSchema.findOne({
+    userId: req.user!.id,
+    "emailVerification.token": token,
+    "emailVerification.expiresAt": { $gt: Date.now() },
+  });
+
+  if (!userAuth) {
+    res.status(404).json({ message: "Codice invalido o scaduto" });
+    return;
+  }
+
+  await userAuth.updateOne({
+    emailVerification: { token: null, expiresAt: null },
+  });
+  const user = await UserSchema.findOneAndUpdate(
+    { _id: userAuth.userId },
+    { emailVerified: true }
+  );
+
+  await sendWelcomeEmail(user!.email, user!.name);
+
+  res.status(200).json({ message: "Email verificata con successo" });
+});
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    res.status(404).json({ message: "missing email" });
+    return;
+  }
+
+  const user = await UserSchema.findOne({ email });
+
+  if (!user) {
+    res.status(404).json({ message: "utente non trovato" });
+    return;
+  }
+
+  let userAuth = await AuthSchema.findOne({ userId: user._id });
+
+  const password = {
+    token: crypto.randomBytes(64).toString("hex"),
+    expiresAt: Date.now() + 1 * 60 * 60 * 1000,
+  };
+
+  if (!userAuth) {
+    userAuth = await AuthSchema.create({
+      userId: user._id,
+      password,
+    });
+  } else {
+    await userAuth.updateOne({ password });
+  }
+
+  await sendPasswordResetEmail(user.email, user.name, password.token);
+});

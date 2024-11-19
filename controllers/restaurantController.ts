@@ -376,7 +376,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       return {
         ...item,
         img: itemImgUrl,
-      };``
+      };
     });
 
     const uploadedItems = await Promise.all(itemPromises);

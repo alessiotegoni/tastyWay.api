@@ -45,7 +45,7 @@ export const uploadMultImgs = () => {
     limits: { fileSize: 5 * 1024 * 1024 },
   });
 
-  return upload.any()
+  return upload.any();
 };
 
 export const calcExpectedTime = (

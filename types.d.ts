@@ -22,6 +22,7 @@ export type UserAccessToken = {
   address: string;
   isCmpAccount: boolean;
   isGoogleLogged: boolean;
+  emailVerified: boolean;
   createdAt: NativeDate;
 };
 

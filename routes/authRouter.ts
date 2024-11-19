@@ -5,6 +5,7 @@ import {
   refreshToken,
   signIn,
   signUp,
+  verifyEmail,
 } from "../controllers/authController";
 import {
   validateGoogleAuth,
@@ -12,6 +13,7 @@ import {
   validateUserBody,
 } from "../lib/validations/userValidation";
 import { verifyAddress } from "../middlewares/verifyAddress";
+import { verifyJWT } from "../middlewares/verifyJWT";
 
 const router = Router();
 
@@ -24,9 +26,11 @@ router.post(
   verifyAddress,
   signUp
 );
-
 router.get("/refresh", refreshToken);
-
 router.delete("/logout", logout);
+
+router.post("/verify-email", verifyJWT, verifyEmail)
+router.post("/forgot-password", verifyEmail)
+
 
 export default router;

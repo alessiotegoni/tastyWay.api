@@ -33,6 +33,10 @@ const UserSchema = new Schema(
       type: String,
       minlength: 6,
     },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
     isCompanyAccount: {
       type: Boolean,
       default: false,
