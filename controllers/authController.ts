@@ -9,6 +9,7 @@ import { GoogleUserData, UserRefreshToken } from "../types";
 import axios from "axios";
 import {
   sendPasswordResetEmail,
+  sendPasswordResetSuccessfullyEmail,
   sendVerificationEmail,
   sendWelcomeEmail,
 } from "../lib/mailtrap/mailFns";
@@ -381,21 +382,21 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
-    res.status(404).json({ message: "missing email" });
+    res.status(400).json({ message: "missing email" });
     return;
   }
 
   const user = await UserSchema.findOne({ email });
 
   if (!user) {
-    res.status(404).json({ message: "utente non trovato" });
+    res.status(404).json({ message: "Utente non trovato" });
     return;
   }
 
   let userAuth = await AuthSchema.findOne({ userId: user._id });
 
   const password = {
-    token: crypto.randomBytes(64).toString("hex"),
+    token: crypto.randomBytes(20).toString("hex"),
     expiresAt: Date.now() + 1 * 60 * 60 * 1000,
   };
 
@@ -408,5 +409,57 @@ export const forgotPassword = asyncHandler(async (req, res) => {
     await userAuth.updateOne({ password });
   }
 
-  await sendPasswordResetEmail(user.email, user.name, password.token);
+  await sendPasswordResetEmail(
+    user.email,
+    user.name,
+    `${process.env.CLIENT_URL}/reset-password/${password.token}`
+  );
+
+  res.status(200).json({
+    message:
+      "Una email con un codice di verifica e' stata mandata alla tua casella di posta",
+  });
+});
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token, email, newPassword } = req.body;
+
+  if (!token || !newPassword || !email) {
+    res
+      .status(400)
+      .json({ message: "missing password reset token, newPassword or email" });
+    return;
+  }
+
+  const authUser = await AuthSchema.findOne({
+    "password.token": token,
+    "password.expiresAt": { $gt: Date.now() },
+  });
+
+  if (!authUser) {
+    res.status(404).json({ message: "Token invalido o scaduto" });
+    return;
+  }
+
+  const user = await UserSchema.findOne(
+    { _id: authUser.userId, email },
+    { _id: 1, email: 1, name: 1 }
+  );
+
+  if (!user) {
+    res.status(404).json({ message: "Utente non trovato" });
+    return;
+  }
+
+  await authUser
+    .updateOne({ password: { token: null, expiresAt: null } })
+    .lean();
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  await user.updateOne({ password: hashedPassword }).lean();
+
+  await sendPasswordResetSuccessfullyEmail(user!.email, user!.name);
+
+  res.status(200).json({ message: "Password reimpostata con successo" });
 });

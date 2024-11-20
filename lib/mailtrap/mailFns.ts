@@ -32,12 +32,28 @@ export const sendWelcomeEmail = async (email: string, name: string) =>
     },
   });
 
-export const sendPasswordResetEmail = async (email: string, name: string, resetToken: string) =>
+export const sendPasswordResetEmail = async (
+  email: string,
+  name: string,
+  resetLink: string
+) =>
   await sendEmail({
     to: [{ email, name }],
     template_uuid: "28400a42-5683-4750-9dd7-0c5a3bbf5021",
     template_variables: {
       username: name,
-      resetLink: `${process.env.CLIENT_URL}/reset-password/${resetToken}`,
+      resetLink,
+    },
+  });
+
+export const sendPasswordResetSuccessfullyEmail = async (
+  email: string,
+  name: string
+) =>
+  await sendEmail({
+    to: [{ email, name }],
+    template_uuid: "59103f33-1c10-4b45-b645-484613a804a7",
+    template_variables: {
+      username: name,
     },
   });

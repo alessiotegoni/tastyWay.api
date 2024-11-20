@@ -1,8 +1,10 @@
 import { Router } from "express";
 import {
+  forgotPassword,
   googleAuth,
   logout,
   refreshToken,
+  resetPassword,
   signIn,
   signUp,
   verifyEmail,
@@ -29,8 +31,8 @@ router.post(
 router.get("/refresh", refreshToken);
 router.delete("/logout", logout);
 
-router.post("/verify-email", verifyJWT, verifyEmail)
-router.post("/forgot-password", verifyEmail)
-
+router.post("/verify-email", verifyJWT, verifyEmail);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 export default router;
