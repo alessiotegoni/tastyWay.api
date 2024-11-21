@@ -1,6 +1,6 @@
 import { CorsOptions } from "cors";
 
-const allowedOrigins = ["http://localhost:5173"];
+const allowedOrigins = [process.env.CLIENT_URL!];
 
 export const corsOptions: CorsOptions = {
   credentials: true,

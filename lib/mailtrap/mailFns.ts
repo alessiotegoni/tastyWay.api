@@ -1,6 +1,5 @@
 import { Address, Mail } from "mailtrap";
 import { mailtrapClient, sender } from "../../config/mailtrap";
-import { VERIFICATION_EMAIL_TEMPLATE } from "./emailsTemplates";
 
 export const sendEmail = async (emailInfo: any) =>
   await mailtrapClient.send({
@@ -15,12 +14,12 @@ export const sendVerificationEmail = async (
 ) =>
   await sendEmail({
     to: [{ email, name }],
-    subject: "Verifica la tua email",
-    html: VERIFICATION_EMAIL_TEMPLATE.replace(
-      "{verificationCode}",
-      token
-    ).replace("{username}", name),
-    category: "verify_email",
+    template_uuid: "43b529a9-a995-4f89-b335-3cba87fe99e2",
+    template_variables: {
+      username: name,
+      email,
+      verificationCode: token,
+    },
   });
 
 export const sendWelcomeEmail = async (email: string, name: string) =>

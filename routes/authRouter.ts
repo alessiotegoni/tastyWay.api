@@ -9,13 +9,14 @@ import {
   signUp,
   verifyEmail,
 } from "../controllers/authController";
-import {
-  validateGoogleAuth,
-  validateSignInBody,
-  validateUserBody,
-} from "../lib/validations/userValidation";
+import { validateUserBody } from "../lib/validations/userValidation";
 import { verifyAddress } from "../middlewares/verifyAddress";
 import { verifyJWT } from "../middlewares/verifyJWT";
+import {
+  validateGoogleAuth,
+  validateResetPassword,
+  validateSignInBody,
+} from "../lib/validations/authValidation";
 
 const router = Router();
 
@@ -33,6 +34,6 @@ router.delete("/logout", logout);
 
 router.post("/verify-email", verifyJWT, verifyEmail);
 router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+router.post("/reset-password", validateResetPassword, resetPassword);
 
 export default router;

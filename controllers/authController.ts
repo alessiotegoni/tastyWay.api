@@ -115,7 +115,7 @@ export const signIn = asyncHandler(async (req, res) => {
   ).lean();
 
   if (!user) {
-    res.status(401).json({ message: `Email o password errata` });
+    res.status(401).json({ message: `Email o password errate` });
     return;
   }
 
@@ -130,7 +130,7 @@ export const signIn = asyncHandler(async (req, res) => {
   const passwordMatchs = await bcrypt.compare(password, user.password);
 
   if (!passwordMatchs) {
-    res.status(401).json({ message: "Email o password errata" });
+    res.status(401).json({ message: "Email o password errate" });
     return;
   }
 
@@ -417,19 +417,12 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     message:
-      "Una email con un codice di verifica e' stata mandata alla tua casella di posta",
+      "Una email di richiesta di reset della password e' stata mandata alla tua casella di posta",
   });
 });
 
 export const resetPassword = asyncHandler(async (req, res) => {
   const { token, email, newPassword } = req.body;
-
-  if (!token || !newPassword || !email) {
-    res
-      .status(400)
-      .json({ message: "missing password reset token, newPassword or email" });
-    return;
-  }
 
   const authUser = await AuthSchema.findOne({
     "password.token": token,

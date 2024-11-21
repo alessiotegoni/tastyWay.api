@@ -1,42 +1,7 @@
 import { body, query } from "express-validator";
 import { valErrsHandler } from "./errsHandler";
 import { isValidObjectId } from "mongoose";
-
-export const validateGoogleAuth = [
-  body("name")
-    .optional()
-    .isString()
-    .withMessage(`Il nome dell'utente deve essere una stringa`),
-
-  body("surname")
-    .optional()
-    .isString()
-    .withMessage(`Il cognome dell'utente deve essere una stringa`),
-
-  body("email").optional().isEmail().withMessage("Email non valida"),
-
-  body("profileImg")
-    .optional()
-    .isURL()
-    .withMessage("Url dell'immagine utente invalido"),
-
-  body("access_token")
-    .optional()
-    .isString()
-    .withMessage("Access token invalido"),
-
-  valErrsHandler,
-];
-
-export const validateSignInBody = [
-  body("email").isEmail().withMessage("Email non valida"),
-
-  body("password")
-    .isString()
-    .withMessage("La password deve essere una stringa"),
-
-  valErrsHandler,
-];
+import { passwordOptions } from "./authValidation";
 
 export const validateUserBody = [
   body("name")
@@ -106,16 +71,13 @@ export const validateUserInfoBody = [
 
 export const validateUserSecurityBody = [
   body("newPassword")
-    .isString()
-    .isLength({ min: 8 })
-    .withMessage(
-      `La nuova password deve essere una stringa di minimo 8 caratteri`
-    ),
+    .isStrongPassword(passwordOptions)
+    .withMessage("Nuova password invalida"),
 
   body("oldPassword")
     .optional()
     .isString()
-    .withMessage(`La vecchia password deve essere una stringa`),
+    .withMessage("La vecchia password deve essere una stringa"),
 
   valErrsHandler,
 ];
