@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { UserAccessToken } from "../types";
+import { UserAccessToken } from "../types/userTypes";
 import asyncHandler from "express-async-handler";
 import { UserSchema } from "../models";
 
@@ -28,17 +28,14 @@ export const verifyJWT = asyncHandler(
         process.env.JWT_TOKEN_SECRET!
       ) as UserAccessToken;
 
-      const user = await UserSchema.findById(decodedToken?.id, {
-        email: 1,
-        emailVerified: 1,
-      }).lean();
+      const user = await UserSchema.findById(decodedToken?.id);
 
       if (!user || user.email !== decodedToken.email) {
         res.status(401).json({ message: "Utente non esistente" });
         return;
       }
 
-      req.user = { ...decodedToken, emailVerified: user.emailVerified };
+      req.user = user;
 
       next();
     } catch (err) {

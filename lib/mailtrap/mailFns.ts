@@ -7,10 +7,10 @@ export const sendEmail = async (emailInfo: any) =>
     ...emailInfo,
   });
 
-export const sendVerificationEmail = async (
+export const sendEmailVerification = async (
   email: string,
   name: string,
-  token: string
+  verificationCode: string
 ) =>
   await sendEmail({
     to: [{ email, name }],
@@ -18,7 +18,7 @@ export const sendVerificationEmail = async (
     template_variables: {
       username: name,
       email,
-      verificationCode: token,
+      verificationCode,
     },
   });
 

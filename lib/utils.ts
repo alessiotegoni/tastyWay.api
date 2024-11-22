@@ -1,14 +1,9 @@
 import jwt from "jsonwebtoken";
-import {
-  DBOrderItem,
-  OrderItem,
-  SingleOrderItem,
-  UserAccessToken,
-  UserRefreshToken,
-} from "../types";
 import { Response } from "express";
 import multer from "multer";
 import { v2 as cloudinary, UploadApiOptions } from "cloudinary";
+import { UserAccessToken, UserRefreshToken } from "../types/userTypes";
+import { DBOrderItem, OrderItem, SingleOrderItem } from "../types/orderTypes";
 
 type UserJwtType = UserAccessToken | UserRefreshToken;
 

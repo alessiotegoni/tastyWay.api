@@ -4,7 +4,7 @@
   "description": "",
   "main": "main.ts",
   "scripts": {
-    "dev": "concurrently \"nodemon\" \"npm run stripe\"",
+    "dev": "concurrently \"nodemon --exec ts-node --files .\" \"npm run stripe\"",
     "stripe": "stripe listen --forward-to localhost:3000/api/users/orders/checkout-webhook"
   },
   "keywords": [],

@@ -45,7 +45,7 @@ router
   .route("/my/restaurant")
   .get(getMyRestaurant)
   .post(createRestaurant)
-  .patch(
+  .put(
     checkOwner,
     imgsUploader,
     validateRestaurantBody,

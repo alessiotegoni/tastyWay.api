@@ -1,15 +1,14 @@
 import asyncHandler from "express-async-handler";
 import { OrderSchema, RestaurantSchema, UserSchema } from "../models";
 import { calcExpectedTime, getItems, uploadImg } from "../lib/utils";
+import mongoose, { isValidObjectId } from "mongoose";
+import { RestaurantDocument } from "../types/documentTypes";
 import {
-  DBOrderItem,
-  RestaurantDocument,
   RestaurantFilters,
   RestaurantItemsFilters,
-  RestaurantOrder,
   RestaurantOrdersFilters,
-} from "../types";
-import mongoose, { isValidObjectId } from "mongoose";
+} from "../types/filterTypes";
+import { DBOrderItem, RestaurantOrder } from "../types/orderTypes";
 
 export const getRestaurants = asyncHandler(async (req, res) => {
   const { pageParam, limit, filters } = req.query;
@@ -294,7 +293,7 @@ export const createRestaurant = asyncHandler(async (req, res) => {
   }
 
   await RestaurantSchema.create({
-    ownerId: req.user!.id,
+    ownerId: _id,
     location: {
       type: "Point",
       coordinates: [0, 0],
@@ -317,7 +316,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
 
   const nameExist = await RestaurantSchema.exists({
     name,
-    _id: { $ne: req.restaurant._id },
+    _id: { $ne: req.restaurant!._id },
   }).lean();
 
   if (nameExist) {
@@ -326,7 +325,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
   }
 
   const addressExist = await RestaurantSchema.exists({
-    _id: { $ne: req.restaurant._id },
+    _id: { $ne: req.restaurant!._id },
     location: {
       coords: req.coords,
     },
@@ -339,7 +338,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     return;
   }
 
-  if (!req.restaurant.imageUrl) {
+  if (!req.restaurant!.imageUrl) {
     res.status(404).json({ message: "Immagine del ristorante obbligatoria" });
     return;
   }
@@ -347,9 +346,9 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
   const updatedItems: DBOrderItem[] = [];
   try {
     const itemPromises = items.map(async (item: DBOrderItem, index: number) => {
-      const itemImg = req.files?.find(
-        (file) => file.fieldname === `items[${index}][img]`
-      );
+      const itemImg = Array.isArray(req.files)
+        ? req.files?.find((file) => file.fieldname === `items[${index}][img]`)
+        : null;
 
       item.name = `${item.name[0].toUpperCase()}${item.name.slice(1)}`;
       item.description = `${item.description[0].toUpperCase()}${item.description.slice(
@@ -388,8 +387,8 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     return;
   }
 
-  await req.restaurant
-    .updateOne({
+  await req
+    .restaurant!.updateOne({
       ...req.body,
       items: updatedItems,
       location: {
@@ -407,7 +406,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
 export const updateRestaurantImg = asyncHandler(async (req, res) => {
   const restaurantImg = req.file;
 
-  let restaurantImgUrl = req.restaurant.imageUrl;
+  let restaurantImgUrl = req.restaurant!.imageUrl;
 
   if (restaurantImg) {
     try {
@@ -419,12 +418,12 @@ export const updateRestaurantImg = asyncHandler(async (req, res) => {
           dpr: "auto",
           quality: "auto",
           format: "auto",
-          aspect_ratio: "4:3",
+          aspect_ratio: "1:1",
         },
       });
 
       restaurantImgUrl = imgUrl;
-      await req.restaurant.updateOne({ imageUrl: restaurantImgUrl });
+      await req.restaurant!.updateOne({ imageUrl: restaurantImgUrl });
     } catch (error) {
       res.status(500).json({
         message: "Errore nel caricamento dell'immagine del ristorante",
@@ -443,7 +442,7 @@ export const getActiveOrders = asyncHandler(async (req, res) => {
   const restaurant = req.restaurant;
 
   const activeOrders = await OrderSchema.find({
-    restaurantId: restaurant._id,
+    restaurantId: restaurant!._id,
     status: { $ne: "Consegnato" },
   })
     .lean()
@@ -462,7 +461,7 @@ export const getActiveOrders = asyncHandler(async (req, res) => {
 
     const expectedTime = calcExpectedTime(
       order.createdAt,
-      restaurant.deliveryInfo!.time
+      restaurant!.deliveryInfo!.time
     );
 
     const fullInfo = {
@@ -489,7 +488,7 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
 
   // const skip = (Number(page) - 1) * Number(limit);
 
-  const query: any = { restaurantId: restaurant._id };
+  const query: any = { restaurantId: restaurant!._id };
 
   if (pageParam) query._id = { $lt: pageParam };
 
@@ -513,11 +512,11 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
 
     if (!customer) return;
 
-    const items = getItems(order.items, restaurant.items, "NAME_QUANTITY");
+    const items = getItems(order.items, restaurant!.items, "NAME_QUANTITY");
 
     const expectedTime = calcExpectedTime(
       order.createdAt,
-      restaurant.deliveryInfo!.time
+      restaurant!.deliveryInfo.time
     );
 
     const fullInfo: RestaurantOrder = {

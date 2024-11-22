@@ -11,7 +11,7 @@ import { stripe } from "../config/stripe";
 
 export const getUserOrders = asyncHandler(async (req, res) => {
   const { id: orderId, pageParam, limit } = req.query;
-  const { id: userId } = req.user!;
+  const { _id: userId } = req.user!;
 
   if (orderId) {
     const order = await OrderSchema.findOne({
@@ -167,7 +167,14 @@ export const getUserActiveOrders = asyncHandler(async (req, res) => {
 
 export const createCheckoutSession = asyncHandler(async (req, res) => {
   const { restaurantId, itemsIds, address } = req.body;
-  const { id: userId } = req.user!;
+  const { id: userId, emailVerified } = req.user!;
+
+  if (!emailVerified) {
+    res
+      .status(403)
+      .json({ message: "Per ordinare devi prima verificare la tua email" });
+    return;
+  }
 
   const query = {
     _id: restaurantId,
@@ -307,40 +314,32 @@ export const createOrder = async (order: {
 };
 
 export const getUserProfile = asyncHandler(async (req, res) => {
-  const { id: userId } = req.user!;
-
-  const user = await UserSchema.findById(userId, {
-    name: 1,
-    surname: 1,
-    isCompanyAccount: 1,
-    address: 1,
-    phoneNumber: 1,
-  }).lean();
-
-  if (!user) {
-    res.status(404).json({ message: "Utente non trovato" });
-    return;
-  }
+  const { name, surname, isCompanyAccount, address, phoneNumber } = req.user!;
 
   res.status(200).json({
-    ...user,
-    address: user.address ?? "",
-    phoneNumber: user.phoneNumber ?? 0,
+    name,
+    surname,
+    isCompanyAccount,
+    address: address ?? "",
+    phoneNumber: phoneNumber ?? 0,
   });
 });
 
 export const updateUserInfo = asyncHandler(async (req, res) => {
   const { phoneNumber, isCompanyAccount } = req.body;
 
-  const user = await UserSchema.findById(req.user!.id, {
-    isCompanyAccount: 1,
-    profileImg: 1,
-    phoneNumber: 1,
-  });
+  const { _id, emailVerified, isCompanyAccount: isUserCmpAccount } = req.user!;
+
+  if (!emailVerified) {
+    res
+      .status(403)
+      .json({ message: "Verifica l'email prima di aggiornare il profilo" });
+    return;
+  }
 
   const numberExist = await UserSchema.exists({
     phoneNumber,
-    _id: { $ne: user!._id },
+    _id: { $ne: _id },
   }).lean();
 
   if (numberExist) {
@@ -350,14 +349,14 @@ export const updateUserInfo = asyncHandler(async (req, res) => {
     return;
   }
 
-  if (user!.isCompanyAccount && !isCompanyAccount) {
+  if (isUserCmpAccount && !isCompanyAccount) {
     res.status(400).json({
       message: "Non puoi passare da account aziendale a account utente",
     });
     return;
   }
 
-  await user!.updateOne({ ...req.body }).lean();
+  await req.user!.updateOne({ ...req.body }).lean();
 
   res.status(200).json({ message: "Utente modificato con successo" });
 });
@@ -365,15 +364,22 @@ export const updateUserInfo = asyncHandler(async (req, res) => {
 export const updateUserSecurity = asyncHandler(async (req, res) => {
   const { newPassword, oldPassword } = req.body;
 
-  const user = await UserSchema.findById(req.user!.id, { password: 1 });
+  const { password: userPassword, emailVerified } = req.user!;
 
-  if (user?.password && !oldPassword) {
+  if (!emailVerified) {
+    res
+      .status(403)
+      .json({ message: "Per cambiare password devi prima verificare l'email" });
+    return;
+  }
+
+  if (userPassword && !oldPassword) {
     res.status(404).json({ message: "OldPassword field required" });
     return;
   }
 
-  if (user?.password && oldPassword) {
-    const passwordsMatch = await bcrypt.compare(oldPassword, user.password);
+  if (userPassword && oldPassword) {
+    const passwordsMatch = await bcrypt.compare(oldPassword, userPassword);
 
     if (!passwordsMatch) {
       res.status(401).json({ message: "Le password non corrispondono" });
@@ -383,7 +389,7 @@ export const updateUserSecurity = asyncHandler(async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-  await user!.updateOne({ password: hashedPassword }).lean();
+  await req.user!.updateOne({ password: hashedPassword }).lean();
 
   res.status(200).json({ message: "Password aggiornata con successo" });
 });
@@ -396,7 +402,17 @@ export const updateUserImg = asyncHandler(async (req, res) => {
     return;
   }
 
-  const profileImg = await uploadImg(image);
+  const profileImg = await uploadImg(image, {
+    transformation: {
+      width: 800,
+      height: 800,
+      crop: "fill",
+      dpr: "auto",
+      quality: "auto",
+      format: "auto",
+      aspect_ratio: "1:1",
+    },
+  });
 
   await req.user!.updateOne({ profileImg });
 
@@ -406,7 +422,7 @@ export const updateUserImg = asyncHandler(async (req, res) => {
 export const deleteUser = asyncHandler(async (req, res) => {
   const { id: userId } = req.user!;
 
-  await UserSchema.findOneAndDelete({ _id: userId });
+  await req.user!.deleteOne();
   await OrderSchema.findOneAndDelete({ customerId: userId });
 
   res.status(200).json({ message: "Utente ed ordini cancellati con successo" });

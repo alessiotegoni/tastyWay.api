@@ -1,216 +1,40 @@
-import { Request } from "express";
-import { JwtPayload } from "jsonwebtoken";
-import { OrderSchema } from "./models";
-import { Document, Types } from "mongoose";
+import {
+  UserDocument,
+  RestaurantDocument,
+  OrderDocument,
+} from "./types/documentTypes";
 
-// export interface RequestWithJwt extends Request {
-//   user?: {
-//     id: string;
-//     email: string;
-//     name: string;
-//     surname: string;
-//   };
+// export interface UserRequest extends Request {
+//   user: UserDocument;
 // }
 
-export type UserAccessToken = {
-  id: string;
-  email: string;
-  restaurantName?: string;
-  imageUrl?: string;
-  name: string;
-  surname: string;
-  address: string;
-  isCmpAccount: boolean;
-  isGoogleLogged: boolean;
-  emailVerified: boolean;
-  createdAt: NativeDate;
-};
+// export interface RestaurantRequest extends Request {
+//   restaurant: RestaurantDocument;
+// }
 
-export interface GoogleUserData {
-  aud: string;
-  azp: string;
-  email: string;
-  email_verified: boolean;
-  exp: number;
-  family_name: string;
-  given_name: string;
-  iat: number;
-  iss: string;
-  jti: string;
-  name: string;
-  nbf: number;
-  picture: string;
-  sub: string;
-}
+// export interface OrderRequest extends Request {
+//   order: RestaurantDocument;
+// }
 
-export type UserRefreshToken = {
-  id: string;
-  email: string;
-};
+// export interface FilesRequest extends Request {
+//   files: Express.Multer.File[];
+// }
 
-export interface OrderDocument extends Document {
-  customerId: Types.ObjectId;
-  restaurantId: Types.ObjectId;
-  status: string;
-  address: string;
-  totalPrice: number;
-  items: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface RestaurantDocument extends Document {
-  //   ownerId: string;
-  //   name: string;
-  //   address: {
-  //     street: string;
-  //     city: string;
-  //     country: string;
-  //   };
-  //cuisine: string[];
-  imageUrl: string;
-  _id: Types.ObjectId;
-  deliveryInfo: {
-    //price: number;
-    time: number;
-  };
-  items: DBOrderItem[];
-  //   createdAt?: Date;
-  //   updatedAt?: Date;
-}
+// export interface CoordsRequest extends Request {
+//   coords: [number, number];
+// }
 
 declare global {
   namespace Express {
     interface Request {
-      user?: UserAccessToken & JwtPayload;
-      restaurant: RestaurantDocument;
+      user?: UserDocument;
+      restaurant?: RestaurantDocument;
       order?: OrderDocument;
-      files?: Express.Multer.File[];
+      files?: Multer.File[];
       coords?: [number, number];
     }
   }
 }
-
-export type newOrderItem = {
-  description: string;
-} & Omit<SingleOrderItem, "_id" | "quantity">;
-
-export type oldOrderItem = {
-  description: string;
-} & Omit<SingleOrderItem, "quantity">;
-
-// Items di tutti gli ordini
-
-export type OrderItem = {
-  _id?: Types.ObjectId;
-  name: string;
-  quantity: number;
-};
-
-// Items dell'ordine singolo
-
-export type SingleOrderItem = {
-  img?: string;
-  price: number;
-} & OrderItem;
-
-export type DBOrderItem = Omit<SingleOrderItem, "quantity"> & {
-  description: string;
-  type: string;
-};
-
-// Ordine singolo
-
-export type RestaurantOrder = {
-  clientFullName: string;
-  orderId: string;
-  address: string;
-  status: string;
-  totalPrice: number;
-  expectedTime: Date;
-  items: (OrderItem | SingleOrderItem)[];
-};
-
-export enum FoodType {
-  PIZZA = "pizza",
-  SUSHI = "sushi",
-  BURGER = "burger",
-  DESSERT = "dessert",
-  ITALIAN = "italian",
-  CHINESE = "chinese",
-  MEXICAN = "mexican",
-  INDIAN = "indian",
-  MEDITERRANEAN = "mediterranean",
-  VEGETARIAN = "vegetarian",
-  VEGAN = "vegan",
-  FAST_FOOD = "fast_food",
-  SEAFOOD = "seafood",
-  BBQ = "bbq",
-  HEALTHY = "healthy",
-  STEAKHOUSE = "steakhouse",
-  BREAKFAST = "breakfast",
-  BAKERY = "bakery",
-  THAI = "thai",
-}
-
-export enum RestaurantType {
-  CHEAP = "cheap",
-  EXPENSIVE = "expensive",
-  TOP_RATED = "top_rated",
-  FAST_DELIVERY = "fast_delivery",
-  NEW = "new",
-  TRENDING = "trending",
-}
-
-export type RestaurantFilters = {
-  name: string | null;
-  foodType: FoodType[] | null;
-  restaurantType: `${RestaurantType}`[] | null; // tranforma gli enum in union type di stringhe
-};
-
-export enum RestaurantItemsTypes {
-  PIZZA = "pizza",
-  BURGER = "burger",
-  PASTA = "pasta",
-  SALAD = "salad",
-  SANDWICH = "sandwich",
-  FLATBREAD = "flatbread",
-  FRIED_FOOD = "fried_food",
-  SUSHI = "sushi",
-  APPETIZERS = "appetizers",
-  DESSERTS = "desserts",
-  DRINKS = "drinks",
-  BBQ = "bbq",
-  SEAFOOD = "seafood",
-  MEAT = "meat",
-  SOUP = "soup",
-  VEGAN = "vegan",
-  VEGETARIAN = "vegetarian",
-  GLUTEN_FREE = "gluten_free",
-  FRUIT = "fruit",
-  TAPAS = "tapas",
-  SANDWICHES = "sandwiches",
-  RICE = "rice",
-  POKE = "poke",
-  MAIN_COURSE = "main_course",
-}
-
-export type RestaurantItemsFilters = {
-  name: string | null;
-  itemsTypes: RestaurantItemsType[] | null;
-};
-
-export type OrderStatus =
-  | "In attesa"
-  | "Accettato"
-  | "In preparazione"
-  | "In consegna"
-  | "Consegnato";
-
-export type RestaurantOrdersFilters = {
-  statusTypes: OrderStatus[];
-  orderInfo: string;
-};
 
 // Tutti gli ordini
 

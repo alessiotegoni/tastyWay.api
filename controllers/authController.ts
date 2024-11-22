@@ -5,14 +5,14 @@ import crypto from "crypto";
 import { AuthSchema, RestaurantSchema, UserSchema } from "../models";
 import { setJwtCookie, signJwt } from "../lib/utils";
 import jwt from "jsonwebtoken";
-import { GoogleUserData, UserRefreshToken } from "../types";
 import axios from "axios";
 import {
   sendPasswordResetEmail,
   sendPasswordResetSuccessfullyEmail,
-  sendVerificationEmail,
+  sendEmailVerification,
   sendWelcomeEmail,
 } from "../lib/mailtrap/mailFns";
+import { GoogleUserData, UserRefreshToken } from "../types/userTypes";
 
 export const googleAuth = asyncHandler(async (req, res) => {
   const googleAccessToken = req.body?.access_token;
@@ -44,16 +44,20 @@ export const googleAuth = asyncHandler(async (req, res) => {
 
   const { email, given_name, family_name, picture } = userData;
 
-  let user = await UserSchema.findOne({ email }).lean();
+  let user = await UserSchema.findOne({
+    email,
+  }).lean();
 
   if (!user) {
-    user = await UserSchema.create({
-      email,
-      name: given_name,
-      surname: family_name,
-      profileImg: picture,
-      emailVerified: true,
-    });
+    user = (
+      await UserSchema.create({
+        email,
+        name: given_name,
+        surname: family_name,
+        profileImg: picture,
+        emailVerified: true,
+      })
+    ).toObject();
   }
 
   let restaurantName: string | undefined;
@@ -95,9 +99,8 @@ export const googleAuth = asyncHandler(async (req, res) => {
     "17d"
   );
 
-  if (!accessToken || !refreshToken) {
+  if (!accessToken || !refreshToken)
     throw Error("Error while generating jwt token");
-  }
 
   setJwtCookie(refreshToken, res);
 
@@ -210,7 +213,7 @@ export const signUp = asyncHandler(async (req, res) => {
     100000 + Math.random() * 900000
   ).toString();
 
-  const emailRes = await sendVerificationEmail(
+  const emailRes = await sendEmailVerification(
     req.body.email,
     req.body.name,
     emailVerificationToken
@@ -257,7 +260,7 @@ export const signUp = asyncHandler(async (req, res) => {
   );
 
   if (!accessToken || !refreshToken) {
-    throw Error("Error while generating jwt token");
+    throw new Error("Error while generating jwt token");
   }
 
   setJwtCookie(refreshToken, res);
@@ -332,7 +335,7 @@ export const logout = (req: Request, res: Response) => {
   const { jwt } = req?.cookies;
 
   if (!jwt) {
-    res.status(404).json({ message: "Utente gia' sloggato" });
+    res.status(400).json({ message: "Utente gia' sloggato" });
     return;
   }
 
@@ -341,22 +344,63 @@ export const logout = (req: Request, res: Response) => {
   res.status(200).json({ message: "Sloggato con successo" });
 };
 
+export const sendVerificationEmail = asyncHandler(async (req, res) => {
+  const { id: userId, emailVerified, email, name } = req.user!;
+
+  if (emailVerified) {
+    res.status(400).json({ message: "Hai gia verificato l'email" });
+    return;
+  }
+
+  const emailVerification = {
+    token: Math.floor(100000 + Math.random() * 900000).toString(),
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+  };
+
+  const emailRes = await sendEmailVerification(
+    email,
+    name,
+    emailVerification.token
+  );
+
+  if (!emailRes.success) {
+    res
+      .status(400)
+      .json({ message: "Errore nell'invio dell'email di verifica" });
+    return;
+  }
+
+  let authUser = await AuthSchema.findOne({ userId });
+
+  if (!authUser)
+    authUser = await AuthSchema.create({
+      userId,
+      emailVerification,
+    });
+  else await authUser.updateOne({ emailVerification });
+
+  res.status(!authUser ? 201 : 200).json({
+    message:
+      "Una email con un codice e' stata mandata alla tua casella di posta",
+  });
+});
+
 export const verifyEmail = asyncHandler(async (req, res) => {
-  const { token } = req.body;
+  const { code } = req.body;
 
   if (req.user!.emailVerified) {
     res.status(400).json({ message: "Hai gia verificato l'email" });
     return;
   }
 
-  if (!token) {
+  if (!code) {
     res.status(404).json({ message: "Missing token" });
     return;
   }
 
   const userAuth = await AuthSchema.findOne({
     userId: req.user!.id,
-    "emailVerification.token": token,
+    "emailVerification.token": code,
     "emailVerification.expiresAt": { $gt: Date.now() },
   });
 

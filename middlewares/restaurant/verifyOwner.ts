@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import { RestaurantSchema } from "../../models";
-import { RestaurantDocument } from "../../types";
+import { RestaurantDocument } from "../../types/documentTypes";
 
 export const checkOwner = asyncHandler(async (req, res, next) => {
   const { id: userId } = req.user!;

@@ -44,7 +44,7 @@ router.use(checkCmpAccount);
 
 router.delete("/profile", deleteUser);
 
-router.patch("/profile/img", imgUploader, updateUserImg);
+router.patch("/profile-img", imgUploader, updateUserImg);
 
 router.post(
   "/orders/create-checkout-session",

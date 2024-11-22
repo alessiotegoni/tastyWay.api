@@ -5,6 +5,7 @@ import {
   logout,
   refreshToken,
   resetPassword,
+  sendVerificationEmail,
   signIn,
   signUp,
   verifyEmail,
@@ -32,8 +33,12 @@ router.post(
 router.get("/refresh", refreshToken);
 router.delete("/logout", logout);
 
-router.post("/verify-email", verifyJWT, verifyEmail);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", validateResetPassword, resetPassword);
+
+router.use(verifyJWT);
+
+router.post("/send-verification-email", sendVerificationEmail);
+router.post("/verify-email", verifyEmail);
 
 export default router;

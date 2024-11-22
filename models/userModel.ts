@@ -1,4 +1,5 @@
 import { model, Schema } from "mongoose";
+import { UserDocument } from "../types/documentTypes";
 
 const UserSchema = new Schema(
   {
@@ -53,4 +54,4 @@ UserSchema.index(
   }
 );
 
-export default model("users", UserSchema);
+export default model<UserDocument>("users", UserSchema);
