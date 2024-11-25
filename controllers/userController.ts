@@ -2,12 +2,14 @@ import asyncHandler from "express-async-handler";
 import { OrderSchema, RestaurantSchema, UserSchema } from "../models";
 import {
   calcExpectedTime,
+  calcItemsQuantities,
   calcTotalPrice,
   getItems,
   uploadImg,
 } from "../lib/utils";
 import bcrypt from "bcrypt";
 import { stripe } from "../config/stripe";
+import { sendOrderRecapEmail } from "../lib/mailtrap/mailFns";
 
 export const getUserOrders = asyncHandler(async (req, res) => {
   const { id: orderId, pageParam, limit } = req.query;
@@ -227,17 +229,21 @@ export const createCheckoutSession = asyncHandler(async (req, res) => {
     quantity: item.quantity,
   }));
 
-  const CLIENT_URL = process.env.CLIENT_URL!;
-
   const totalPrice = calcTotalPrice(items, restaurant.deliveryInfo!.price);
 
   const metadata = {
     userId,
     restaurantId,
-    itemsIds: JSON.stringify(items.map((i) => i._id)),
+    itemsIds: JSON.stringify(
+      itemsIds.filter((itemId: string) =>
+        items.some((item) => item._id!.toString() === itemId)
+      )
+    ),
     totalPrice,
     address,
   };
+
+  const CLIENT_URL = process.env.CLIENT_URL!;
 
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card", "paypal"],
@@ -287,13 +293,37 @@ export const stripeWebhookHandler = asyncHandler(async (req, res) => {
   const { restaurantId, userId, itemsIds, totalPrice, address } =
     event.data.object.metadata!;
 
+  const parsedItemsIds = JSON.parse(itemsIds);
+  const parsedTotalPrice = Number(totalPrice);
+
   await createOrder({
     customerId: userId,
     restaurantId,
     address,
-    itemsIds: JSON.parse(itemsIds),
-    totalPrice: Number(totalPrice),
+    itemsIds: parsedItemsIds,
+    totalPrice: parsedTotalPrice,
   });
+
+  const itemsQuantities = calcItemsQuantities(parsedItemsIds);
+  const user = await UserSchema.findById(userId, { email: 1, name: 1 }).lean();
+  const restaurantItems = (
+    await RestaurantSchema.findById(restaurantId, { items: 1 }).lean()
+  )?.items
+    .filter((item) => itemsIds.includes(item._id!.toString()))
+    .map((item) => ({
+      img: item.img,
+      name: item.name,
+      price: item.price,
+      quantity: itemsQuantities[item._id!.toString()],
+    }))!;
+
+  await sendOrderRecapEmail(
+    user!.email,
+    user!.name,
+    restaurantItems,
+    parsedTotalPrice.toFixed(2),
+    address
+  );
 });
 
 export const createOrder = async (order: {

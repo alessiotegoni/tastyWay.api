@@ -209,35 +209,10 @@ export const signUp = asyncHandler(async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  const emailVerificationToken = Math.floor(
-    100000 + Math.random() * 900000
-  ).toString();
-
-  const emailRes = await sendEmailVerification(
-    req.body.email,
-    req.body.name,
-    emailVerificationToken
-  );
-
-  if (!emailRes.success) {
-    res
-      .status(400)
-      .json({ message: "Errore nell'invio dell'email di verifica" });
-    return;
-  }
-
   const user = await UserSchema.create({
     ...req.body,
     password: hashedPassword,
     isCompanyAccount: false,
-  });
-
-  await AuthSchema.create({
-    userId: user._id,
-    emailVerification: {
-      token: emailVerificationToken,
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-    },
   });
 
   const accessToken = signJwt(
