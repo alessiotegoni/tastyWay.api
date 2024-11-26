@@ -29,21 +29,21 @@ export interface UserDocument extends Document {
 }
 
 export interface RestaurantDocument extends Document {
-  //   ownerId: string;
-  //   name: string;
-  //   address: {
-  //     street: string;
-  //     city: string;
-  //     country: string;
-  //   };
-  //cuisine: string[];
   _id: Types.ObjectId;
+  ownerId: string;
+  name: string;
+  address: string;
+  cuisine: string[];
   imageUrl: string;
+  location: {
+    type: "Point";
+    coordinates: [number, number];
+  };
   deliveryInfo: {
-    //price: number;
+    price: number;
     time: number;
   };
   items: DBOrderItem[];
-  //   createdAt?: Date;
-  //   updatedAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

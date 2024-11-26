@@ -189,26 +189,26 @@ export const getRestaurantByName = asyncHandler(async (req, res) => {
       imageUrl: 1,
       createdAt: 1,
       items: 1,
+      "location.coordinates": 1,
     }
-  ).lean();
+  ).lean<RestaurantDocument | null>();
+  
+  const content = restaurant
+    ? {
+        _id: restaurant._id,
+        name: restaurant.name,
+        imageUrl: restaurant.imageUrl,
+        address: restaurant.address,
+        deliveryInfo: restaurant.deliveryInfo,
+        itemsTypes: restaurant.items
+          .filter((item, _, arr) => arr.indexOf(item) === arr.lastIndexOf(item))
+          .map((i) => i.type),
+        coordinates: restaurant.location!.coordinates,
+        createdAt: restaurant.createdAt,
+      }
+    : null;
 
-  res.status(200).json(
-    restaurant
-      ? {
-          _id: restaurant._id,
-          name: restaurant.name,
-          imageUrl: restaurant.imageUrl,
-          address: restaurant.address,
-          deliveryInfo: restaurant.deliveryInfo,
-          itemsTypes: restaurant.items
-            .filter(
-              (item, _, arr) => arr.indexOf(item) === arr.lastIndexOf(item)
-            )
-            .map((i) => i.type),
-          createdAt: restaurant.createdAt,
-        }
-      : null
-  );
+  res.status(200).json(content);
 });
 
 export const getRestaurantItems = asyncHandler(async (req, res) => {
