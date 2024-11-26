@@ -438,6 +438,15 @@ export const updateRestaurantImg = asyncHandler(async (req, res) => {
   });
 });
 
+export const getActiveOrdersCount = asyncHandler(async (req, res) => {
+  const restaurantOrdersCount = await OrderSchema.countDocuments({
+    restaurantId: req.restaurant!._id,
+    status: { $e: "In attesa" },
+  });
+
+  res.status(200).json(restaurantOrdersCount);
+});
+
 export const getActiveOrders = asyncHandler(async (req, res) => {
   const restaurant = req.restaurant;
 

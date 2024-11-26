@@ -112,6 +112,15 @@ export const getUserOrders = asyncHandler(async (req, res) => {
   res.status(200).json({ orders: fullOrders, nextCursor });
 });
 
+export const getUserActiveOrdersCount = asyncHandler(async (req, res) => {
+  const userOrdersCount = await OrderSchema.countDocuments({
+    customerId: req!.user,
+    status: { $ne: "Consegnato" },
+  });
+
+  res.status(200).json(userOrdersCount);
+});
+
 export const getUserActiveOrders = asyncHandler(async (req, res) => {
   const { id: userId } = req.user!;
 

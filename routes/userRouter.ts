@@ -3,6 +3,7 @@ import {
   createCheckoutSession,
   deleteUser,
   getUserActiveOrders,
+  getUserActiveOrdersCount,
   getUserOrders,
   getUserProfile,
   stripeWebhookHandler,
@@ -54,6 +55,7 @@ router.post(
 );
 
 router.get("/orders", validateUserOrdersQuery, getUserOrders);
+router.get("/active-orders-count", getUserActiveOrdersCount);
 router.get("/active-orders", getUserActiveOrders);
 
 export default router;

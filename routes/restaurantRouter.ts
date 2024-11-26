@@ -3,6 +3,7 @@ import {
   createRestaurant,
   deleteOrder,
   getActiveOrders,
+  getActiveOrdersCount,
   getMyRestaurant,
   getRestaurantByName,
   getRestaurantItems,
@@ -18,7 +19,6 @@ import { checkOwner } from "../middlewares/restaurant/verifyOwner";
 import { uploadMultImgs, uploadSingleImg } from "../lib/utils";
 import { verifyOrder } from "../middlewares/restaurant/verifyOrder";
 import {
-  validateQuery,
   validateRestaurantBody,
   validateRestaurantItems,
   validateRestaurantParam,
@@ -64,6 +64,7 @@ router.patch(
 
 router.use(checkOwner);
 
+router.get("/my/restaurant/active-orders-count", getActiveOrdersCount);
 router.get("/my/restaurant/active-orders", getActiveOrders);
 
 router
