@@ -192,7 +192,7 @@ export const getRestaurantByName = asyncHandler(async (req, res) => {
       "location.coordinates": 1,
     }
   ).lean<RestaurantDocument | null>();
-  
+
   const content = restaurant
     ? {
         _id: restaurant._id,
@@ -434,7 +434,6 @@ export const updateRestaurantImg = asyncHandler(async (req, res) => {
 
   res.json({
     message: "Immagine aggiornata con successo",
-    imageUrl: restaurantImgUrl,
   });
 });
 
