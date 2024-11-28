@@ -64,7 +64,7 @@ export const getRestaurants = asyncHandler(async (req, res) => {
             { $gt: [{ $strLenCP: "$name" }, 3] },
             { $gt: [{ $strLenCP: "$imageUrl" }, 0] },
             { $gt: [{ $size: "$cuisine" }, 0] },
-            { $gt: [{ $size: "$items" }, 1] },
+            { $gt: [{ $size: "$items" }, 3] },
           ],
         },
       },
@@ -440,7 +440,7 @@ export const updateRestaurantImg = asyncHandler(async (req, res) => {
 export const getActiveOrdersCount = asyncHandler(async (req, res) => {
   const restaurantOrdersCount = await OrderSchema.countDocuments({
     restaurantId: req.restaurant!._id,
-    status: { $e: "In attesa" },
+    status: "In attesa",
   });
 
   res.status(200).json(restaurantOrdersCount);
