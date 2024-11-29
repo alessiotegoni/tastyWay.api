@@ -16,15 +16,10 @@ export const signJwt = (user: UserJwtType, expiresIn: string) => {
 };
 
 export const setJwtCookie = (token: string, res: Response) => {
-
-  const isProduction = process.env.NODE_ENV === "production"
-
-  console.log(isProduction);
-
   res.cookie("jwt", token, {
     httpOnly: true, // Impedisce l'accesso ai cookie tramite JavaScript (sicurezza)
-    secure: isProduction, // Solo HTTPS in produzione
-    sameSite: isProduction ? "strict" : "lax", // Protezione contro attacchi CSRF
+    secure: process.env.NODE_ENV === "production", // Solo HTTPS in produzione
+    sameSite: "none", // Protezione contro attacchi CSRF
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
