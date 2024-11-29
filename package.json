@@ -5,7 +5,7 @@
   "main": "main.ts",
   "scripts": {
     "dev": "concurrently \"nodemon --exec ts-node --files .\" \"npm run stripe\"",
-    "build": "npm install typescript && npx tsc",
+    "build": "npm install && npx tsc",
     "start": "node dist/main.js",
     "stripe": "stripe listen --forward-to localhost:3000/api/users/orders/checkout-webhook"
   },
@@ -13,6 +13,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "typescript": "^5.5.4",
     "@googlemaps/google-maps-services-js": "^3.4.0",
     "@types/concurrently": "^6.4.0",
     "@types/cookie-parser": "^1.4.7",
@@ -43,7 +44,6 @@
     "@types/multer": "^1.4.11",
     "@types/node": "^22.5.0",
     "nodemon": "^3.1.4",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.5.4"
+    "ts-node": "^10.9.2"
   }
 }
