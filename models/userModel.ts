@@ -22,7 +22,6 @@ const UserSchema = new Schema(
     },
     phoneNumber: {
       type: Number,
-      unique: true,
     },
     email: {
       type: String,
@@ -46,12 +45,12 @@ const UserSchema = new Schema(
   { timestamps: true }
 );
 
-UserSchema.index(
-  { phoneNumber: 1 },
-  {
-    unique: true,
-    partialFilterExpression: { phoneNumber: { $exists: true, $ne: null } },
-  }
-);
+// UserSchema.index(
+//   { phoneNumber: 1 },
+//   {
+//     unique: true,
+//     partialFilterExpression: { phoneNumber: { $exists: true, $ne: null } },
+//   }
+// );
 
 export default model<UserDocument>("users", UserSchema);

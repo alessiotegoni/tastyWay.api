@@ -64,7 +64,7 @@ export const getRestaurants = asyncHandler(async (req, res) => {
             { $gt: [{ $strLenCP: "$name" }, 3] },
             { $gt: [{ $strLenCP: "$imageUrl" }, 0] },
             { $gt: [{ $size: "$cuisine" }, 0] },
-            { $gt: [{ $size: "$items" }, 3] },
+            { $gt: [{ $size: "$items" }, 1] },
           ],
         },
       },
