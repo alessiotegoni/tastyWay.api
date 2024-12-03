@@ -314,7 +314,13 @@ export const logout = (req: Request, res: Response) => {
     return;
   }
 
-  res.clearCookie("jwt", { httpOnly: true, secure: true });
+  const isProduction = process.env.NODE_ENV === "production";
+
+  res.clearCookie("jwt", {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
+  });
 
   res.status(200).json({ message: "Sloggato con successo" });
 };
