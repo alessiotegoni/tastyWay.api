@@ -41,6 +41,9 @@ export const getRestaurants = asyncHandler(async (req, res) => {
 
   const restaurantFilters = filters as RestaurantFilters;
 
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
   const baseQuery: mongoose.PipelineStage[] = [
     {
       $geoNear: {
@@ -66,6 +69,13 @@ export const getRestaurants = asyncHandler(async (req, res) => {
             { $gt: [{ $size: "$cuisine" }, 0] },
             { $gt: [{ $size: "$items" }, 1] },
           ],
+        },
+      },
+    },
+    {
+      $addFields: {
+        isNew: {
+          $gte: ["$createdAt", oneWeekAgo],
         },
       },
     },
@@ -160,6 +170,7 @@ export const getRestaurants = asyncHandler(async (req, res) => {
       address: 1,
       deliveryInfo: 1,
       cuisine: 1,
+      isNew: 1,
     },
   });
 
