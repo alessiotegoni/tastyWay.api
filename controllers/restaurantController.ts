@@ -200,9 +200,9 @@ export const getRestaurantByName = asyncHandler(async (req, res) => {
         imageUrl: restaurant.imageUrl,
         address: restaurant.address,
         deliveryInfo: restaurant.deliveryInfo,
-        itemsTypes: restaurant.items
-          .filter((item, _, arr) => arr.indexOf(item) === arr.lastIndexOf(item))
-          .map((i) => i.type),
+        itemsTypes: Array.from(
+          new Set(restaurant.items.map((item) => item.type))
+        ),
         coordinates: restaurant.location!.coordinates,
         createdAt: restaurant.createdAt,
       }

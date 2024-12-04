@@ -53,6 +53,7 @@ export const restaurantItemsTypes = [
   "rice",
   "poke",
   "main_course",
+  "healthy"
 ];
 
 export const ordersStatus = [
